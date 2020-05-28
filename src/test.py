@@ -1,5 +1,5 @@
 from raycasts import *
-import read
+import reader
 
 
 def main():
