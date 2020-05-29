@@ -11,14 +11,14 @@ def read_slp(filepath, loud = False):
 
 
     with h5py.File(filepath, 'r') as f:
-        print(type(f))
-        print(f.keys())
         node_names = f['node_names']
         track_names = f['track_names'] # am ende nur noch 3
         track_occupancy = f['track_occupancy']
         tracks = f['tracks']
 
         if loud:
+            print(type(f))
+            print(f.keys())
             print("\nNODE NAMES")
             print(node_names.shape) # 3. SPALTE in trakcs
             print(node_names[:])
