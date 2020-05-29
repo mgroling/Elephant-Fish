@@ -190,11 +190,15 @@ def get_intersect(a1, a2, b1, b2):
 
 #main
 
-#wall lines were not using the same coordinates as deeplabcut, so we had to invert one (580 is length, 582 is height)
-our_wall_lines = [(580-elem[0], 582-elem[1], 580-elem[2], 582-elem[3]) for elem in defineLines(getRedPoints())]
+def main():
+    #wall lines were not using the same coordinates as deeplabcut, so we had to invert one (580 is length, 582 is height)
+    our_wall_lines = [(580-elem[0], 582-elem[1], 580-elem[2], 582-elem[3]) for elem in defineLines(getRedPoints())]
 
-ray = Raycast(our_wall_lines, 6, 3, 120, 1000, 3)
+    ray = Raycast(our_wall_lines, 6, 3, 120, 1000, 3)
 
-np_array = pd.read_csv("I:/Code/SWP/Raycasts/data/3fishDLC_resnet152_track_fishesMay7shuffle1_100000.csv").to_numpy()[2:, 1:]
+    np_array = pd.read_csv("I:/Code/SWP/Raycasts/data/3fishDLC_resnet152_track_fishesMay7shuffle1_100000.csv").to_numpy()[2:, 1:]
 
-ray.getRays(np_array, "I:/Code/SWP/Raycasts/data/savee.csv", 3, 12)
+    ray.getRays(np_array, "I:/Code/SWP/Raycasts/data/savee.csv", 3, 12)
+
+if __name__ == "__main__":
+    main()
