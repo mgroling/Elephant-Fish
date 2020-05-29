@@ -50,9 +50,9 @@ def extract_coordinates(file, nodes_to_extract, fish_to_extract):
     # Get h5 object
     node_names, track_names, track_occupancy, tracks = read_slp(file)
 
-    print(node_names['head'])
+
 
 
 if __name__ == "__main__":
     # just a test
-     read_slp("data/MARC_USE_THIS_DATA.h5", True)
+    read_slp("data/MARC_USE_THIS_DATA.h5", True)
