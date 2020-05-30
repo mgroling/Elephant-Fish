@@ -3,23 +3,21 @@ import pandas as pd
 import imageio
 import math
 
-def test():
-    print("hello")
-
 class Raycast:
-    def __init__(self, wall_lines, count_bins_agents, count_rays_walls, radius_field_of_view, max_view_range, count_fishes):
+    def __init__(self, wall_lines, count_bins_agents, count_rays_walls, radius_field_of_view_agents, radius_field_of_view_walls, max_view_range, count_fishes):
         self._wall_lines = wall_lines
         self._agent_rays = count_bins_agents
         self._wall_rays = count_rays_walls
-        self._radius = radius_field_of_view
+        self._radius_walls = radius_field_of_view_walls
+        self._radius_agents = radius_field_of_view_agents
         self._max_view_range = max_view_range
 
-        self._bins_header = np.array([[("fish_" + str(j) + "_bin_" + str((360-(radius_field_of_view/2) + i*(radius_field_of_view/count_bins_agents))%360) + "_" + str((360-(radius_field_of_view/2) + (i+1)*(radius_field_of_view/count_bins_agents))%360)) for i in range(0, count_bins_agents)] for j in range(0, count_fishes)]).flatten()
-        self._bins = [(360-(radius_field_of_view/2) + i*(radius_field_of_view/count_bins_agents)) for i in range(0, count_bins_agents+1)]
+        self._bins_header = np.array([[("fish_" + str(j) + "_bin_" + str((360-(radius_field_of_view_agents/2) + i*(radius_field_of_view_agents/count_bins_agents))%360) + "_" + str((360-(radius_field_of_view_agents/2) + (i+1)*(radius_field_of_view_agents/count_bins_agents))%360)) for i in range(0, count_bins_agents)] for j in range(0, count_fishes)]).flatten()
+        self._bins = [(360-(radius_field_of_view_agents/2) + i*(radius_field_of_view_agents/count_bins_agents)) for i in range(0, count_bins_agents+1)]
 
         #might not be optimal (for 360 radius, 180 is double and for close to 360 the two rays on the back dont have the same angle between them as others)
-        self._wall_rays_header = np.array([["fish_" + str(j) + "_wall_ray_" + str((360-radius_field_of_view/2 + i*(radius_field_of_view/(count_rays_walls-1)))%360) for i in range(0, count_rays_walls)] for j in range(0, count_fishes)]).flatten()
-        self._wall = [(360-radius_field_of_view/2 + i*(radius_field_of_view/(count_rays_walls-1)))%360 for i in range(0, count_rays_walls)]
+        self._wall_rays_header = np.array([["fish_" + str(j) + "_wall_ray_" + str((360-radius_field_of_view_walls/2 + i*(radius_field_of_view_walls/(count_rays_walls-1)))%360) for i in range(0, count_rays_walls)] for j in range(0, count_fishes)]).flatten()
+        self._wall = [(360-radius_field_of_view_walls/2 + i*(radius_field_of_view_walls/(count_rays_walls-1)))%360 for i in range(0, count_rays_walls)]
 
     def getRays(self, df, path_to_save_to, agents, cols_per_agent):
         self._getFish(df, agents, cols_per_agent)
@@ -28,7 +26,7 @@ class Raycast:
             new_row = [[] for k in range(0, len(self._bins_header))]
             distance_row = []
             for j in range(0, len(self._fishes)):
-                first_component, second_component = (self._fishes[j][i][0] - self._fishes[j][i][3], self._fishes[j][i][1] - self._fishes[j][i][4])
+                first_component, second_component = (self._fishes[j][i][0] - self._fishes[j][i][2], self._fishes[j][i][1] - self._fishes[j][i][3])
                 look_vector = np.array([first_component, second_component])
                 start_pos = np.array([self._fishes[j][i][0], self._fishes[j][i][1]])
 
@@ -59,7 +57,7 @@ class Raycast:
         return_list = [[],[]]
         for i in range(0, len(self._fishes)):
             if i != fish_id:
-                vector_to_fish = np.array([self._fishes[i][row][3] - self._fishes[fish_id][row][3], self._fishes[i][row][4] - self._fishes[fish_id][row][4]])
+                vector_to_fish = np.array([self._fishes[i][row][2] - self._fishes[fish_id][row][2], self._fishes[i][row][2] - self._fishes[fish_id][row][2]])
 
                 temp = np.dot(look_vector, vector_to_fish)/np.linalg.norm(look_vector)/np.linalg.norm(vector_to_fish)
                 angle = np.degrees(np.arccos(np.clip(temp, -1, 1)))
@@ -67,7 +65,7 @@ class Raycast:
                 temp_orth = np.dot(orth_look_vector, vector_to_fish)/np.linalg.norm(orth_look_vector)/np.linalg.norm(vector_to_fish)
                 angle_orth = np.degrees(np.arccos(np.clip(temp_orth, -1, 1)))
 
-                distance = getDistance(self._fishes[i][row][3], self._fishes[i][row][4], self._fishes[fish_id][row][3], self._fishes[fish_id][row][4])
+                distance = getDistance(self._fishes[i][row][2], self._fishes[i][row][3], self._fishes[fish_id][row][2], self._fishes[fish_id][row][3])
 
                 #We do this orthogonal look vector because if we do not, then we only get values between 0 and 180 and so any angle on the left will be treated the same as any angle on the right.
                 if angle_orth > 90:
@@ -109,8 +107,6 @@ class Raycast:
                     break
 
         return distances
-
-
 
     def _getFish(self, np_array, agents, cols_per_agent):
         #Create a seperate numpy array for each fish
@@ -192,15 +188,11 @@ def get_intersect(a1, a2, b1, b2):
 
 #main
 
-def main():
-    #wall lines were not using the same coordinates as deeplabcut, so we had to invert one (580 is length, 582 is height)
-    our_wall_lines = [(580-elem[0], 582-elem[1], 580-elem[2], 582-elem[3]) for elem in defineLines(getRedPoints())]
+#wall lines were not using the same coordinates as deeplabcut, so we had to invert one (580 is length, 582 is height)
+our_wall_lines = [(580-elem[0], 582-elem[1], 580-elem[2], 582-elem[3]) for elem in defineLines(getRedPoints())]
 
-    ray = Raycast(our_wall_lines, 6, 3, 120, 1000, 3)
+ray = Raycast(our_wall_lines, 6, 3, 120, 180, 1000, 3)
 
-    np_array = pd.read_csv("I:/Code/SWP/Raycasts/data/3fishDLC_resnet152_track_fishesMay7shuffle1_100000.csv").to_numpy()[2:, 1:]
+np_array = pd.read_csv("I:/Code/SWP/Raycasts/data/3fishDLC_resnet152_track_fishesMay7shuffle1_100000.csv").to_numpy()[2:, 1:]
 
-    ray.getRays(np_array, "I:/Code/SWP/Raycasts/data/savee.csv", 3, 12)
-
-if __name__ == "__main__":
-    main()
+ray.getRays(np_array, "I:/Code/SWP/Raycasts/data/savee.csv", 3, 12)
