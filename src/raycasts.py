@@ -19,10 +19,10 @@ class Raycast:
         self._wall_rays_header = np.array([["fish_" + str(j) + "_wall_ray_" + str((360-radius_field_of_view_walls/2 + i*(radius_field_of_view_walls/(count_rays_walls-1)))%360) for i in range(0, count_rays_walls)] for j in range(0, count_fishes)]).flatten()
         self._wall = [(360-radius_field_of_view_walls/2 + i*(radius_field_of_view_walls/(count_rays_walls-1)))%360 for i in range(0, count_rays_walls)]
 
-    def getRays(self, df, path_to_save_to, agents, cols_per_agent):
-        self._getFish(df, agents, cols_per_agent)
+    def getRays(self, np_array, path_to_save_to):
+        self._getFish(np_array)
         output_np_array = np.array([np.append(self._bins_header, self._wall_rays_header)])
-        for i in range(0, 1):
+        for i in range(0, len(np_array)):
             new_row = [[] for k in range(0, len(self._bins_header))]
             distance_row = []
             for j in range(0, len(self._fishes)):
@@ -101,18 +101,18 @@ class Raycast:
             for j in range(0, len(self._wall_lines)):
                 intersection = get_intersect((self._wall_lines[j][0], self._wall_lines[j][1]), (self._wall_lines[j][2], self._wall_lines[j][3]), (start_pos[0], start_pos[1]), (start_pos[0] + new_ray[0], start_pos[1] + new_ray[1]))
 
-                #check if it is between the two points of the line
-                if intersection[0] >= min(self._wall_lines[j][0], self._wall_lines[j][2]) and intersection[0] <= intersection[0] <= max(self._wall_lines[j][0], self._wall_lines[j][2]):
+                #check if it is between the two points of the line and if it is in max_view_range
+                if intersection[0] >= min(self._wall_lines[j][0], self._wall_lines[j][2]) and intersection[0] <= intersection[0] <= max(self._wall_lines[j][0], self._wall_lines[j][2]) and getDistance(start_pos[0], start_pos[1], intersection[0], intersection[1]) < self._max_view_range:
                     distances[i] = (1 - getDistance(start_pos[0], start_pos[1], intersection[0], intersection[1]) / self._max_view_range)
                     break
 
         return distances
 
-    def _getFish(self, np_array, agents, cols_per_agent):
+    def _getFish(self, np_array):
         #Create a seperate numpy array for each fish
         self._fishes = []
-        for i in range(0, agents):
-            self._fishes.append(np_array[:, i*cols_per_agent:(i+1)*cols_per_agent].astype(float))
+        for i in range(0, int(np_array.shape[1]/4)):
+            self._fishes.append(np_array[:, i*4:(i+1)*4].astype(float))
 
 def getRedPoints(cluster_distance = 50, path = "I:/Code/SWP/Raycasts/data/redpoints_walls.jpg", red_min_value = 200):
     """
@@ -185,14 +185,3 @@ def get_intersect(a1, a2, b1, b2):
     if z == 0:                          # lines are parallel
         return (float('inf'), float('inf'))
     return (x/z, y/z)
-
-#main
-
-#wall lines were not using the same coordinates as deeplabcut, so we had to invert one (580 is length, 582 is height)
-our_wall_lines = [(580-elem[0], 582-elem[1], 580-elem[2], 582-elem[3]) for elem in defineLines(getRedPoints())]
-
-ray = Raycast(our_wall_lines, 6, 3, 120, 180, 1000, 3)
-
-np_array = pd.read_csv("I:/Code/SWP/Raycasts/data/3fishDLC_resnet152_track_fishesMay7shuffle1_100000.csv").to_numpy()[2:, 1:]
-
-ray.getRays(np_array, "I:/Code/SWP/Raycasts/data/savee.csv", 3, 12)
