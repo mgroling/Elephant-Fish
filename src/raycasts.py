@@ -114,7 +114,7 @@ class Raycast:
         for i in range(0, int(np_array.shape[1]/4)):
             self._fishes.append(np_array[:, i*4:(i+1)*4].astype(float))
 
-def getRedPoints(cluster_distance = 50, path = "I:/Code/SWP/Raycasts/data/redpoints_walls.jpg", red_min_value = 200):
+def getRedPoints(cluster_distance = 25, path = "I:/Code/SWP/Raycasts/data/redpoints_walls.jpg", red_min_value = 200):
     """
     Given a Path, this function will return a list of points in the form of tuples (x, y).
     The points are read from the picture in a way such that points that they must exceed the red_min_value and only one will be considered in the range of cluster_distance.
@@ -122,15 +122,16 @@ def getRedPoints(cluster_distance = 50, path = "I:/Code/SWP/Raycasts/data/redpoi
     im = imageio.imread(path)
     point_cluster_center = []
     add_new = True
+    print(im.shape)
     for i in range(0, im.shape[0]):
         for j in range(0, im.shape[1]):
             add_new = True
             if im[i, j, 0] > red_min_value:
                 for k in range(0, len(point_cluster_center)):
-                    if getDistance(point_cluster_center[k][0], point_cluster_center[k][1], i, j) < cluster_distance:
+                    if getDistance(point_cluster_center[k][0], point_cluster_center[k][1], j, i) < cluster_distance:
                         add_new = False
                 if add_new:
-                    point_cluster_center.append((i,j))
+                    point_cluster_center.append((j,i))
     return point_cluster_center
 
 def defineLines(points):
@@ -152,7 +153,7 @@ def defineLines(points):
                 cur_min_index = i
         lines_list.append((current_point[0], current_point[1], points[cur_min_index][0], points[cur_min_index][1]))
 
-    #For our last line to be computed correctly, we take the 2 points that were only used one for now and define a line between them.
+    #For our last line to be computed correctly, we take the 2 points that were only used once for now and define a line between them.
     temp = []
     lines_list_single_points = [(elem[0], elem[1]) for elem in lines_list] + [(elem[2], elem[3]) for elem in lines_list]
     count_points = {x:lines_list_single_points.count(x) for x in lines_list_single_points}
