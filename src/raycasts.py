@@ -3,6 +3,9 @@ import pandas as pd
 import imageio
 import math
 
+def test():
+    print("hello")
+
 class Raycast:
     def __init__(self, wall_lines, count_bins_agents, count_rays_walls, radius_field_of_view, max_view_range, count_fishes):
         self._wall_lines = wall_lines
@@ -21,7 +24,6 @@ class Raycast:
     def getRays(self, df, path_to_save_to, agents, cols_per_agent):
         self._getFish(df, agents, cols_per_agent)
         output_np_array = np.array([np.append(self._bins_header, self._wall_rays_header)])
-        print(output_np_array)
         for i in range(0, 1):
             new_row = [[] for k in range(0, len(self._bins_header))]
             distance_row = []
