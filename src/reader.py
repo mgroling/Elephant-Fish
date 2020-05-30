@@ -79,7 +79,6 @@ def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2]):
         print("Node indices are ", node_indices)
 
     # Return appropiate data: only wanted nodes, and wanted fishes
-    print(tracks.shape)
     return tracks[:, :, node_indices, :][fish_to_extract,:,:,:]
 
 
@@ -91,10 +90,10 @@ if __name__ == "__main__":
     # print(b)
     file = "data/MARC_USE_THIS_DATA.h5"
 
-    output = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,2])
+    output = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])
     print(output)
     print(output[0,:,:,0]) #fish 0 at frame 0
     print(output.shape)
 
     # only head node x and y from fish 0 data:
-    headonly = extract_coordinates(file, [b'head'], [0])
+    # headonly = extract_coordinates(file, [b'head'], [0])
