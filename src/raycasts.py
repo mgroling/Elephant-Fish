@@ -122,7 +122,6 @@ def getRedPoints(cluster_distance = 25, path = "I:/Code/SWP/Raycasts/data/redpoi
     im = imageio.imread(path)
     point_cluster_center = []
     add_new = True
-    print(im.shape)
     for i in range(0, im.shape[0]):
         for j in range(0, im.shape[1]):
             add_new = True
