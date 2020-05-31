@@ -20,7 +20,8 @@ def main():
     COUNT_FISHES = 3
 
     # Read data
-    track_data = reader.extract_coordinates("data/MARC_USE_THIS_DATA.h5", [b'head', b'center'], fish_to_extract = [0,1,2])
+    file = "data/sleap_1_Diffgroup1-1.h5"
+    track_data = reader.extract_coordinates(file, [b'head', b'center'], fish_to_extract = [0,1,2])
 
     #get raycast data (input)
     df = pd.read_csv("/data/raycast_data.csv")
