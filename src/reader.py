@@ -169,8 +169,11 @@ def interpolate_missing_values(data):
 if __name__ == "__main__":
     file = "data/sleap_1_Diffgroup1-1.h5"
 
-    output = extract_coordinates(file, [b'head',b'center'], fish_to_extract=[0])[0:20,:]
+    output = extract_coordinates(file, [b'head',b'center',b'tail_basis'], fish_to_extract=[0])
+    print("First 20 rows")
     print(output[0:20,:])
+    print("nan values")
+    print(np.where(np.isnan(output)))
     print("With removed values:")
     output[12,0] = float('nan')
     output[13,0] = float('nan')
@@ -188,4 +191,6 @@ if __name__ == "__main__":
     print(output[0:20,:])
     interpolate_missing_values(output)
 
-    print(output[0:20,:])
+    print(output)
+
+    print(np.where(np.isnan(output)))
