@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import imageio
 import math
+from functions import getRedPoints, defineLines, getDistance, get_intersect
 
 class Raycast:
     def __init__(self, wall_lines, count_bins_agents, count_rays_walls, radius_field_of_view_agents, radius_field_of_view_walls, max_view_range, count_fishes):
