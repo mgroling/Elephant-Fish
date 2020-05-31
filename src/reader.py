@@ -109,12 +109,12 @@ def interpolate_missing_values(data):
     output: values in same format, without nan rows
     careful: this directly modifies your data
     """
-
+    print("Interpolate Missing values:")
     n_row, n_col = data.shape
 
     # Iterate through every row for each column
     for col in range(n_col):
-        print("---- column {} ----".format(col))
+        print("column {}".format(col))
 
         curr_row = 0
         last_not_nan_row = -1
