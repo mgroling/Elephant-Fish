@@ -23,7 +23,10 @@ def main():
     track_data = reader.extract_coordinates("data/MARC_USE_THIS_DATA.h5", [b'head', b'center'], fish_to_extract = [0,1,2])
 
     #get raycast data (input)
-    pd.read_csv("/data/raycast_data.csv")
+    df = pd.read_csv("/data/raycast_data.csv")
+    input_raw = df.to_numpy()
+
+    #get locomotion data (input/output)
 
     # Tensorflow magic
 
