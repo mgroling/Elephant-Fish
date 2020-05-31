@@ -105,7 +105,7 @@ def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2]):
 
 
 if __name__ == "__main__":
-    file = "data/MARC_USE_THIS_DATA.h5"
+    file = "data/sleap_1_Diffgroup1-1.h5"
 
     output = extract_coordinates(file, [b'head'], fish_to_extract=[0,1,2])
     print(output[0,:])
