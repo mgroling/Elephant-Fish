@@ -100,7 +100,7 @@ def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2]):
 
         e_indices = e_indices + appendix
 
-    return rtracks[:, e_indices]
+    return interpolate_missing_values(rtracks[:, e_indices])
 
 
 def interpolate_missing_values(data):
@@ -163,6 +163,7 @@ def interpolate_missing_values(data):
                         last_not_nan_row += 1
 
             curr_row += 1
+    return data
 
 
 
@@ -170,26 +171,26 @@ if __name__ == "__main__":
     file = "data/sleap_1_Diffgroup1-1.h5"
 
     output = extract_coordinates(file, [b'head',b'center',b'tail_basis'], fish_to_extract=[0])
-    print("First 20 rows")
-    print(output[0:20,:])
-    print("nan values")
-    print(np.where(np.isnan(output)))
-    print("With removed values:")
-    output[12,0] = float('nan')
-    output[13,0] = float('nan')
-    output[14,0] = float('nan')
-    output[16,0] = float('nan')
-    output[3,1] = float('nan')
-    output[0,3] = float('nan')
-    output[0,2] = float('nan')
-    output[1,2] = float('nan')
-    output[2,2] = float('nan')
-    output[19,1] = float('nan')
-    output[19,3] = float('nan')
-    output[18,3] = float('nan')
-    output[17,3] = float('nan')
-    print(output[0:20,:])
-    interpolate_missing_values(output)
+    # print("First 20 rows")
+    # print(output[0:20,:])
+    # print("nan values")
+    # print(np.where(np.isnan(output)))
+    # print("With removed values:")
+    # output[12,0] = float('nan')
+    # output[13,0] = float('nan')
+    # output[14,0] = float('nan')
+    # output[16,0] = float('nan')
+    # output[3,1] = float('nan')
+    # output[0,3] = float('nan')
+    # output[0,2] = float('nan')
+    # output[1,2] = float('nan')
+    # output[2,2] = float('nan')
+    # output[19,1] = float('nan')
+    # output[19,3] = float('nan')
+    # output[18,3] = float('nan')
+    # output[17,3] = float('nan')
+    # print(output[0:20,:])
+    # interpolate_missing_values(output)
 
     print(output)
 
