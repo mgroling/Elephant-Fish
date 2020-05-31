@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import imageio
 import math
-from functions import getRedPoints, defineLines, getDistance, get_intersect
+from functions import getRedPoints, defineLines, getDistance, get_intersect, getAngle
 
 class Raycast:
     def __init__(self, wall_lines, count_bins_agents, count_rays_walls, radius_field_of_view_agents, radius_field_of_view_walls, max_view_range, count_fishes):
@@ -47,11 +47,8 @@ class Raycast:
                 look_vector = np.array([first_component, second_component])
                 start_pos = np.array([self._fishes[j][i][0], self._fishes[j][i][1]])
 
-                #Initialize an orthogonal vector, that points to the right of your first vector.
-                orth_look_vector = np.array([second_component, -first_component])
-
                 #get angles and distance for this timestep
-                fishRays = self._getFishRays(j, i, look_vector, orth_look_vector)
+                fishRays = self._getFishRays(j, i, look_vector)
 
                 #put it into bins
                 temp_fishAngles = fishRays[0]
@@ -70,25 +67,15 @@ class Raycast:
         df = pd.DataFrame(data = output_np_array[1:], columns = output_np_array[0])
         df.to_csv(path_to_save_to, index = None, sep = ";")
 
-    def _getFishRays(self, fish_id, row, look_vector, orth_look_vector):
+    def _getFishRays(self, fish_id, row, look_vector):
         return_list = [[],[]]
         for i in range(0, len(self._fishes)):
             if i != fish_id:
                 #get a vector to each other fish, from the current fish in question
                 vector_to_fish = np.array([self._fishes[i][row][2] - self._fishes[fish_id][row][2], self._fishes[i][row][2] - self._fishes[fish_id][row][2]])
 
-                #get the angle and distance to the other fish relative to our fish in question
-                temp = np.dot(look_vector, vector_to_fish)/np.linalg.norm(look_vector)/np.linalg.norm(vector_to_fish)
-                angle = np.degrees(np.arccos(np.clip(temp, -1, 1)))
-
-                temp_orth = np.dot(orth_look_vector, vector_to_fish)/np.linalg.norm(orth_look_vector)/np.linalg.norm(vector_to_fish)
-                angle_orth = np.degrees(np.arccos(np.clip(temp_orth, -1, 1)))
-
                 distance = getDistance(self._fishes[i][row][2], self._fishes[i][row][3], self._fishes[fish_id][row][2], self._fishes[fish_id][row][3])
-
-                #We do this orthogonal look vector because if we do not, then we only get values between 0 and 180 and so any angle on the left will be treated the same as any angle on the right.
-                if angle_orth > 90:
-                    angle = 360 - angle
+                angle = getAngle(look_vector, vector_to_fish)
 
                 return_list[0].append(angle)
                 return_list[1].append(distance)
@@ -97,18 +84,8 @@ class Raycast:
     def _getWallRays(self, start_pos, look_vector):
 
         pos_x_axis = np.array([1, 0])
-        pos_y_axis = np.array([0, 1])
-
-        #compute angle of look_vector relative to positive x-axis
-        temp = np.dot(pos_x_axis, look_vector)/np.linalg.norm(look_vector)/np.linalg.norm(pos_x_axis)
-        angle_pos_x_axis_look_vector = np.degrees(np.arccos(np.clip(temp, -1, 1)))
-
-        temp = np.dot(pos_y_axis, look_vector)/np.linalg.norm(look_vector)/np.linalg.norm(pos_y_axis)
-        angle_pos_y_axis_look_vector = np.degrees(np.arccos(np.clip(temp, -1, 1)))
-
-        if angle_pos_y_axis_look_vector > 90:
-            angle_pos_x_axis_look_vector = 360 - angle_pos_x_axis_look_vector
-
+        
+        angle_pos_x_axis_look_vector = getAngle(look_vector, pos_x_axis)
         distances = [0 for i in range(0, len(self._wall))]
 
         for i in range(0, len(self._wall)):
