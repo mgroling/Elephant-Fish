@@ -103,9 +103,94 @@ def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2]):
     return rtracks[:, e_indices]
 
 
+def interpolate_missing_values(data):
+    """
+    input: values in the format of extract_coordinates()
+    output: values in same format, without nan rows
+    careful: this directly modifies your data
+    """
+    print("Interpolate Missing values:")
+    n_row, n_col = data.shape
+
+    # Iterate through every row for each column
+    for col in range(n_col):
+        print("column {}".format(col))
+
+        curr_row = 0
+        last_not_nan_row = -1
+        while curr_row < n_row :
+
+            if not np.isnan(data[curr_row, col]):
+                # Marc (harr harr) as non nan value
+                last_not_nan_row = curr_row
+            elif last_not_nan_row == -1:
+                # Edge case, you start with nan value
+                # This case, take first defined value und place it inside
+                while np.isnan(data[curr_row, col]):
+                    curr_row += 1
+                last_not_nan_row = 0
+                while last_not_nan_row < curr_row:
+                    data[last_not_nan_row, col] = data[curr_row, col]
+                    last_not_nan_row += 1
+                # @TODO (if time): derive movement vector and add that to missing values (difficulty: if there is a directly missing nan afterwards)
+            else:
+                # move to next non nan row
+                rows_moved = 0
+                while curr_row < n_row and np.isnan(data[curr_row, col]):
+                    curr_row += 1
+                    rows_moved += 1
+
+                last_real_value = data[last_not_nan_row, col]
+
+                if curr_row >= n_row:
+                    # Edge Case, you end with nan value:
+                    # Just place last defined value in
+                    while last_not_nan_row < curr_row:
+                        data[last_not_nan_row, col] = last_real_value
+                        last_not_nan_row += 1
+                else:
+                    # compute distance between both defined rows
+                    distance =  last_real_value - data[curr_row, col]
+                    # compute step sizes in between
+                    step = distance / (rows_moved + 1)
+                    # Fill values in between
+                    last_not_nan_row += 1
+                    step_count = 1
+                    while last_not_nan_row < curr_row:
+                        data[last_not_nan_row, col] = last_real_value - step * step_count
+                        assert step_count <= rows_moved
+                        step_count += 1
+                        last_not_nan_row += 1
+
+            curr_row += 1
+
+
 
 if __name__ == "__main__":
     file = "data/sleap_1_Diffgroup1-1.h5"
 
-    output = extract_coordinates(file, [b'head'], fish_to_extract=[0,1,2])
-    print(output[0,:])
+    output = extract_coordinates(file, [b'head',b'center',b'tail_basis'], fish_to_extract=[0])
+    print("First 20 rows")
+    print(output[0:20,:])
+    print("nan values")
+    print(np.where(np.isnan(output)))
+    print("With removed values:")
+    output[12,0] = float('nan')
+    output[13,0] = float('nan')
+    output[14,0] = float('nan')
+    output[16,0] = float('nan')
+    output[3,1] = float('nan')
+    output[0,3] = float('nan')
+    output[0,2] = float('nan')
+    output[1,2] = float('nan')
+    output[2,2] = float('nan')
+    output[19,1] = float('nan')
+    output[19,3] = float('nan')
+    output[18,3] = float('nan')
+    output[17,3] = float('nan')
+    print(output[0:20,:])
+    interpolate_missing_values(output)
+
+    print(output)
+
+    print(np.where(np.isnan(output)))
