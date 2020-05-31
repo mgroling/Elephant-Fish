@@ -75,9 +75,10 @@ def get_intersect(a1, a2, b1, b2):
         return (float('inf'), float('inf'))
     return (x/z, y/z)
 
-def getAngle(vector1, vector2):
+def getAngle(vector1, vector2, mode = "degrees"):
     """
-    Given 2 vectors, in the form of tuples (x1, y1) this will return an angle in degrees.
+    Given 2 vectors, in the form of tuples (x1, y1) this will return an angle in degrees, if not specfified further.
+    If mode is anything else than "degrees", it will return angle in radians
     30° on the right are actually 30° and 30° on the left are 330° (relative to vector1).
     """
     #Initialize an orthogonal vector, that points to the right of your first vector.
@@ -95,4 +96,4 @@ def getAngle(vector1, vector2):
     if angle_orth > 90:
         angle = 360 - angle
 
-    return angle
+    return angle if mode == "degrees" else math.radians(angle)
