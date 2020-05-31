@@ -3,24 +3,30 @@ import reader
 import tensorflow as tf
 import pandas as pd
 import numpy as np
-
+import os
 
 # Use python 3.6.10
 
 def main():
+    #for marc
+    os.chdir("SWP/Elephant-Fish")
+
     # Set variables
-    COUNT_BINS_AGENTS = 6
-    WALL_RAYS_WALLS = 3
-    RADIUS_FIELD_OF_VIEW = 120
-    MAX_VIEW_RANGE = 1000
+    COUNT_BINS_AGENTS = 21
+    WALL_RAYS_WALLS = 15
+    RADIUS_FIELD_OF_VIEW_WALLS = 180
+    RADIUS_FIELD_OF_VIEW_AGENTS = 300
+    MAX_VIEW_RANGE = 600
     COUNT_FISHES = 3
 
     # Read data
     track_data = reader.extract_coordinates("data/MARC_USE_THIS_DATA.h5", [b'head', b'center'], fish_to_extract = [0,1,2])
 
-    # Extract raycasts
-    our_wall_lines = [(580-elem[0], 582-elem[1], 580-elem[2], 582-elem[3]) for elem in defineLines(getRedPoints())]
-    ray = Raycast(our_wall_lines, COUNT_BINS_AGENTS, WALL_RAYS_WALLS, RADIUS_FIELD_OF_VIEW, MAX_VIEW_RANGE, COUNT_FISHES)
+    #get raycast data (input)
+    df = pd.read_csv("/data/raycast_data.csv")
+    input_raw = df.to_numpy()
+
+    #get locomotion data (input/output)
 
     # Tensorflow magic
 
