@@ -32,7 +32,7 @@ def getLocomotion(np_array, path_to_save_to):
 
             new_row[j*2] = getDistance(head_x, head_y, head_x_next, head_y_next)
             new_row[j*2+1] = getAngle(vector, vector_next, mode = "radians")
-        output = np.append(output, new_row, axis = 0)
+        output = np.append(output, [new_row], axis = 0)
 
-    df = pd.DataFrame(data = output, columns = output[0])
+    df = pd.DataFrame(data = output[1:], columns = output[0])
     df.to_csv(path_to_save_to, index = None, sep = ";")

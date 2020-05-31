@@ -84,7 +84,7 @@ class Raycast:
     def _getWallRays(self, start_pos, look_vector):
 
         pos_x_axis = np.array([1, 0])
-        
+
         angle_pos_x_axis_look_vector = getAngle(look_vector, pos_x_axis)
         distances = [0 for i in range(0, len(self._wall))]
 
