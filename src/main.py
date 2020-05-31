@@ -12,10 +12,11 @@ def main():
     os.chdir("SWP/Elephant-Fish")
 
     # Set variables
-    COUNT_BINS_AGENTS = 6
-    WALL_RAYS_WALLS = 3
-    RADIUS_FIELD_OF_VIEW = 120
-    MAX_VIEW_RANGE = 1000
+    COUNT_BINS_AGENTS = 21
+    WALL_RAYS_WALLS = 15
+    RADIUS_FIELD_OF_VIEW_WALLS = 180
+    RADIUS_FIELD_OF_VIEW_AGENTS = 300
+    MAX_VIEW_RANGE = 600
     COUNT_FISHES = 3
 
     # Read data

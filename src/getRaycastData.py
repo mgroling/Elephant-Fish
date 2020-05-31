@@ -9,11 +9,11 @@ def main():
     os.chdir("SWP/Elephant-Fish")
 
     #Set variables
-    COUNT_BINS_AGENTS = 6
-    WALL_RAYS_WALLS = 6
+    COUNT_BINS_AGENTS = 21
+    WALL_RAYS_WALLS = 15
     RADIUS_FIELD_OF_VIEW_WALLS = 180
-    RADIUS_FIELD_OF_VIEW_AGENTS = 180
-    MAX_VIEW_RANGE = 500
+    RADIUS_FIELD_OF_VIEW_AGENTS = 300
+    MAX_VIEW_RANGE = 600
     COUNT_FISHES = 3
  
     #Extract Raycasts
@@ -39,6 +39,7 @@ def main():
 
     print("shape:",temp.shape)
 
+    #get rays and save them
     ray.getRays(temp , "data/raycast_data.csv")
 
 if __name__ == "__main__":

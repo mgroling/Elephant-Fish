@@ -5,6 +5,12 @@ import math
 
 class Raycast:
     def __init__(self, wall_lines, count_bins_agents, count_rays_walls, radius_field_of_view_agents, radius_field_of_view_walls, max_view_range, count_fishes):
+        """
+        Initialize Raycast Object.
+        Wall lines is expected to be a list of lists which contain lines, defined by 4 coordinates (first_point_x, first_point_y, second_point_x, second_point_y).
+        Radius variables should be given in (0,360) and other variables should be positive integers.
+        Angles relative to a fish are seen that from the direction the fish is looking at, 30° to the right are 30° relative to the fish and 30° to the left are 330° relative to the fish.
+        """
         self._wall_lines = wall_lines
         self._agent_rays = count_bins_agents
         self._wall_rays = count_rays_walls
@@ -12,20 +18,30 @@ class Raycast:
         self._radius_agents = radius_field_of_view_agents
         self._max_view_range = max_view_range
 
+        #Define bins for agent rays
         self._bins_header = np.array([[("fish_" + str(j) + "_bin_" + str((360-(radius_field_of_view_agents/2) + i*(radius_field_of_view_agents/count_bins_agents))%360) + "_" + str((360-(radius_field_of_view_agents/2) + (i+1)*(radius_field_of_view_agents/count_bins_agents))%360)) for i in range(0, count_bins_agents)] for j in range(0, count_fishes)]).flatten()
         self._bins = [(360-(radius_field_of_view_agents/2) + i*(radius_field_of_view_agents/count_bins_agents)) for i in range(0, count_bins_agents+1)]
 
+        #Define wall rays
         #might not be optimal (for 360 radius, 180 is double and for close to 360 the two rays on the back dont have the same angle between them as others)
         self._wall_rays_header = np.array([["fish_" + str(j) + "_wall_ray_" + str((360-radius_field_of_view_walls/2 + i*(radius_field_of_view_walls/(count_rays_walls-1)))%360) for i in range(0, count_rays_walls)] for j in range(0, count_fishes)]).flatten()
         self._wall = [(360-radius_field_of_view_walls/2 + i*(radius_field_of_view_walls/(count_rays_walls-1)))%360 for i in range(0, count_rays_walls)]
 
     def getRays(self, np_array, path_to_save_to):
+        """
+        This function expects to be given a numpy array of the shape (rows, count_fishes*4) and saves a csv file at a given path (path has to end on .csv).
+        The information about each given fish (or object in general) should be first_position_x, first_position_y, second_position_x, second_position_y.
+        It is assumed that the fish is looking into the direction of first_positon_x - second_position_x for x and first_positon_y - second_position_y for y.
+        """
         self._getFish(np_array)
         output_np_array = np.array([np.append(self._bins_header, self._wall_rays_header)])
         for i in range(0, len(np_array)):
+            if i%1000 == 0:
+                print("||| Frame " + str(i) + " finished. |||")
             new_row = [[] for k in range(0, len(self._bins_header))]
             distance_row = []
             for j in range(0, len(self._fishes)):
+                #vector of the direction of the fish in question
                 first_component, second_component = (self._fishes[j][i][0] - self._fishes[j][i][2], self._fishes[j][i][1] - self._fishes[j][i][3])
                 look_vector = np.array([first_component, second_component])
                 start_pos = np.array([self._fishes[j][i][0], self._fishes[j][i][1]])
@@ -57,8 +73,10 @@ class Raycast:
         return_list = [[],[]]
         for i in range(0, len(self._fishes)):
             if i != fish_id:
+                #get a vector to each other fish, from the current fish in question
                 vector_to_fish = np.array([self._fishes[i][row][2] - self._fishes[fish_id][row][2], self._fishes[i][row][2] - self._fishes[fish_id][row][2]])
 
+                #get the angle and distance to the other fish relative to our fish in question
                 temp = np.dot(look_vector, vector_to_fish)/np.linalg.norm(look_vector)/np.linalg.norm(vector_to_fish)
                 angle = np.degrees(np.arccos(np.clip(temp, -1, 1)))
 
@@ -80,6 +98,7 @@ class Raycast:
         pos_x_axis = np.array([1, 0])
         pos_y_axis = np.array([0, 1])
 
+        #compute angle of look_vector relative to positive x-axis
         temp = np.dot(pos_x_axis, look_vector)/np.linalg.norm(look_vector)/np.linalg.norm(pos_x_axis)
         angle_pos_x_axis_look_vector = np.degrees(np.arccos(np.clip(temp, -1, 1)))
 
@@ -94,7 +113,6 @@ class Raycast:
         for i in range(0, len(self._wall)):
             #first we create a vector that has a certain degree to our look vector
             angle_relative_to_look_vector = (angle_pos_x_axis_look_vector + (360 - self._wall[i])) % 360
-
             new_ray = np.array([math.cos(math.radians(angle_relative_to_look_vector)), math.sin(math.radians(angle_relative_to_look_vector))])
 
             #and now we check where it collides with which wall and compute the distance to that wall
@@ -117,7 +135,7 @@ class Raycast:
 def getRedPoints(cluster_distance = 25, path = "I:/Code/SWP/Raycasts/data/redpoints_walls.jpg", red_min_value = 200):
     """
     Given a Path, this function will return a list of points in the form of tuples (x, y).
-    The points are read from the picture in a way such that points that they must exceed the red_min_value and only one will be considered in the range of cluster_distance.
+    The points are read from the picture in a way such that points that exceed the red_min_value will be taken and only one will be considered in the range of cluster_distance.
     """
     im = imageio.imread(path)
     point_cluster_center = []
@@ -135,8 +153,8 @@ def getRedPoints(cluster_distance = 25, path = "I:/Code/SWP/Raycasts/data/redpoi
 
 def defineLines(points):
     """
-    Given a list of points, this function will return a list of lines in the form of tuples (x1, y1, x2, y2).
-    Points given have to be in a circle-like structure.
+    Given a list of points (in a circle-like strucuture), this function will return a list of lines in the form of tuples (x1, y1, x2, y2).
+    Points given have to be sorted by x or y (ascending or descending) in order for this to work correctly, if given unsorted this might return wrong values.
     """
     lines_list = []
     #First of we choose a point to look at, then we search for the nearest nearest other point (from our pot) to that one and remove the chosen point from our pot.
