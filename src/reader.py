@@ -103,9 +103,60 @@ def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2]):
     return rtracks[:, e_indices]
 
 
+def interpolate_missing_values(data):
+    """
+    input: values in the format of extract_coordinates()
+    output: values in same format, without nan rows
+    """
+
+    n_row, n_col = data.shape
+    print(n_row , n_col)
+
+    # Iterate through every row for each column
+    for col in range(n_col):
+        print("---- column {} ----".format(col))
+
+        curr_row = 0
+        last_not_nan_row = -1
+        while curr_row < n_row :
+
+            if not np.isnan(data[curr_row, col]):
+                last_not_nan_row = curr_row
+            else:
+                # move to next non nan row
+                rows_moved = 0
+                while np.isnan(data[curr_row, col]):
+                    curr_row += 1
+                    rows_moved += 1
+                # compute distance between both defined rows
+                last_real_value = data[last_not_nan_row, col]
+                distance =  last_real_value - data[curr_row, col]
+                # compute step sizes in between
+                step = distance / (rows_moved + 1)
+                # Fill values in between
+                last_not_nan_row += 1
+                step_count = 1
+                while last_not_nan_row < curr_row:
+                    data[last_not_nan_row, col] = last_real_value - step * step_count
+                    assert step_count <= rows_moved
+                    step_count += 1
+                    last_not_nan_row += 1
+
+            curr_row += 1
+
+
 
 if __name__ == "__main__":
     file = "data/sleap_1_Diffgroup1-1.h5"
 
-    output = extract_coordinates(file, [b'head'], fish_to_extract=[0,1,2])
-    print(output[0,:])
+    output = extract_coordinates(file, [b'head',b'center'], fish_to_extract=[0])
+    print(output[0:20,:])
+
+    output[12,0] = float('nan')
+    output[13,0] = float('nan')
+    output[14,0] = float('nan')
+    output[3,1] = float('nan')
+    print(output[0:20,:])
+    interpolate_missing_values(output)
+
+    print(output[0:20,:])
