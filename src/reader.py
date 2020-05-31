@@ -2,6 +2,7 @@ import h5py
 import pandas as pd
 import numpy as np
 import sys
+import scipy
 
 def read_slp(file, loud = False):
     """
@@ -47,7 +48,7 @@ def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2]):
     Extracts coordinates for given node names in file and returns pandas dataframe
     nodes_to_extract: String array containing at least one of: [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end']
     fish_to_extract: array containing the fishes you want to extract
-    Output: nparray of form: [fishes, x/y coordinate, node_names, frames]
+    Output: nparray of form: [frames, [node0_fish0_x, node0_fish0_y, node1_fish0_x, node1_fish0_y, ..., node0_fish1_x, node0_fish1_y, ...]
     """
 
     # Get data from file
@@ -78,22 +79,33 @@ def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2]):
     else:
         print("Node indices are ", node_indices)
 
+    # Put frames second, convert to 2d array
+    tr = tracks.reshape(-1, tracks.shape[-1]).transpose()
+
+    # Swap x and y values into right positions
+    # Stackoverflow magic https://stackoverflow.com/a/20265477
+    permutation = [0,2,4,6,8,10,12,14,16,18,1,3,5,7,9,11,13,15,17,19,20,22,24,26,28,30,32,34,36,38,21,23,25,27,29,31,33,35,37,39,40,42,44,46,48,50,52,54,56,58,41,43,45,47,49,51,53,55,57,59]
+    idx = np.empty_like(permutation)
+    idx[permutation] = np.arange(len(permutation))
+    rtracks = tr[:, idx]
+
     # Return appropiate data: only wanted nodes, and wanted fishes
-    return tracks[:, :, node_indices, :][fish_to_extract,:,:,:]
+    e_indices = []
+    for i in fish_to_extract:
+        # calculate correct positions for indices
+        x_pos = list(map(lambda x: 2 * x + (20 * i), node_indices))
+        y_pos = list(map(lambda x: 2 * x + 1 + (20 * i), node_indices))
+        # merge both into one list
+        appendix = [pos for tup in zip(x_pos,y_pos) for pos in tup]
+
+        e_indices = e_indices + appendix
+
+    return rtracks[:, e_indices]
 
 
 
 if __name__ == "__main__":
-    # just a test
-    # a, b, c, d = read_slp("data/MARC_USE_THIS_DATA.h5", True)
-    # print(a)
-    # print(b)
     file = "data/MARC_USE_THIS_DATA.h5"
 
-    output = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])
-    print(output)
-    print(output[0,:,:,0]) #fish 0 at frame 0
-    print(output.shape)
-
-    # only head node x and y from fish 0 data:
-    # headonly = extract_coordinates(file, [b'head'], [0])
+    output = extract_coordinates(file, [b'head'], fish_to_extract=[0,1,2])
+    print(output[0,:])
