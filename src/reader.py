@@ -274,7 +274,7 @@ def get_distances(data, shorter = True):
     """
     Computes distances for [x1 y1 x2 y2 ...] and [x1_next y1_next x2_next y2_next...]
     input: values in the format of extract_coordinates()
-    output: [dis1 dis2 ....]
+    output: [[dis1 dis2 ....]]
     careful: output array is one row shorter as input!
     """
     n_rows, n_cols = data.shape
@@ -285,7 +285,7 @@ def get_distances(data, shorter = True):
     data2 = np.vstack( (np.delete(data, 0, 0), lastrow) )
     mov = data - data2                      # subract x_curr x_next
     mov = mov**2                            # power
-    dist = np.sum(mov[:,[0,1]], axis = 1)   # add x and y to eachother
+    dist = np.atleast_2d(np.sum(mov[:,[0,1]], axis = 1))   # add x and y to eachother
     for i in range(1,int(n_cols/2)):        # do to the rest of the cols
         dist = np.vstack((dist, np.sum(mov[:,[2*i,2*i + 1]], axis = 1) ))
     dist = np.sqrt(dist.T)                  # take square root to gain distances
@@ -301,7 +301,7 @@ def interpolate_outliers(data, max_tolerated_movement=20):
     output: values in same format, without outlier values
     careful: this directly modifies your data
     """
-    print("Interpolate Outliers:")          # Announce this function loudly and passionatly
+    print("Interpolate Outliers:")          # Announce this function loudly and passionately
     n_rows, n_cols = data.shape
 
     # Get distances of all points between 2 frames
