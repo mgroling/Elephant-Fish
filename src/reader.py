@@ -187,7 +187,7 @@ def interpolate_outliers(data, max_tolerated_movement=12):
         dist = np.vstack((dist, np.sum(mov[:,[2*i,2*i + 1]], axis = 1) ))
     dist = np.sqrt(dist.T)                  # take square root to gain distances
 
-    dist = dist[0:(dist.shape[0] - 1),:]    # get rid of last column (it is 0)
+    dist = dist[0:(dist.shape[0] - 1),]    # get rid of last column (it is 0)
     print("avg:", np.mean(dist, axis=0))
     print("max:", np.amax(dist, axis=0))
     print("min:", np.amin(dist, axis=0))
@@ -197,7 +197,7 @@ def interpolate_outliers(data, max_tolerated_movement=12):
 if __name__ == "__main__":
     file = "data/sleap_1_Diffgroup1-1.h5"
 
-    output = extract_coordinates(file, [b'head',b'center'], fish_to_extract=[0,1,2])
+    output = extract_coordinates(file, [b'head'], fish_to_extract=[0])
     # print("First 20 rows")
     # print(output[0:20,:])
     # print("nan values")
