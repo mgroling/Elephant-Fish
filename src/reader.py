@@ -191,6 +191,7 @@ def replace_point_by_middle(data, col, i1, i2, i3):
 def correct_outlier(data, col1, col2, i1, max_tolerated_movement):
     """
     Rekursive function to correct outlier
+    I am pretty sure this is a more special case of correct_wrongly_interpolated_outliers. But refactoring is not the job now
     """
     n_rows, n_cols = data.shape
     assert i1 + 1 < n_rows
@@ -221,12 +222,23 @@ def correct_outlier(data, col1, col2, i1, max_tolerated_movement):
 
 def fill_steps_in(data, col, i1, i2, n_steps):
     """
-    Fills all values in col of data between i1 and i2 evenly
+    Fills all values in col of data between i1 and i2 evenly spaced between value of i1 and i2
     """
     first = data[i1,col]
-    step = (data[i1,col] - data[i2, col])/n_steps
+    step = (first - data[i2, col])/n_steps
     for x in range(1,n_steps):
-        data[i1 + x,col] = first - step * x
+        data[i1 + x, col] = first - step * x
+
+
+def fill_vector_in(data, col, i1, i2):
+    """
+    Fills all values in col of data between i1 and i2 evenly spaced with same size as the value i1 - i2
+    """
+    first = data[i1, col]
+    dis = first - data[i1 - 1, col]
+    n_steps = i2 - i1
+    for x in range(1, n_steps):
+        data[i1 + x, col] = first + dis * x
 
 
 def correct_wrongly_interpolated_outliers(data, col1, col2, out_group, max_tolerated_movement):
@@ -234,6 +246,7 @@ def correct_wrongly_interpolated_outliers(data, col1, col2, out_group, max_toler
     Interpolates the values newly for which due to prediction mistakes data was interpolated wrongly
     """
     n_rows, n_cols = data.shape
+    assert n_cols > 1
     assert len(out_group) > 2
     if out_group[-1] + 1 < n_rows:
         # Interpolate values newly between first and last non outlier value
@@ -243,6 +256,15 @@ def correct_wrongly_interpolated_outliers(data, col1, col2, out_group, max_toler
 
         fill_steps_in(data, col1, i_first, i_last, n_vals)  # x
         fill_steps_in(data, col2, i_first, i_last, n_vals)  # y
+    else:
+        # Edge Case, you reached the end of the file (I wonder if this code will ever be executed)
+        print("OH MY GOD, THIS REALLY HAS BEEN EXECUTED")
+        # Take vector from last defined value
+        i_first = out_group[0]
+        i_last = out_group[-1]
+
+        fill_vector_in(data, col1, i_first, i_last)
+        fill_vector_in(data, col2, i_first, i_last)
 
 
 def get_distances(data, shorter = True):
