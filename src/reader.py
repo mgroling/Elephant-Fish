@@ -219,66 +219,106 @@ def correct_outlier(data, col1, col2, i1, max_tolerated_movement):
             correct_outlier(data, col1, col2, i1+1, max_tolerated_movement)
 
 
+def fill_steps_in(data, col, i1, i2, n_steps):
+    """
+    Fills all values in col of data between i1 and i2 evenly
+    """
+    first = data[i1,col]
+    step = (data[i1,col] - data[i2, col])/n_steps
+    for x in range(1,n_steps):
+        data[i1 + x,col] = first - step * x
+
+
+def correct_wrongly_interpolated_outliers(data, col1, col2, out_group, max_tolerated_movement):
+    """
+    Interpolates the values newly for which due to prediction mistakes data was interpolated wrongly
+    """
+    n_rows, n_cols = data.shape
+    assert len(out_group) > 2
+    if out_group[-1] + 1 < n_rows:
+        # Interpolate values newly between first and last non outlier value
+        i_first = out_group[0]
+        i_last = out_group[-1] + 1
+        n_vals = len(out_group)
+
+        fill_steps_in(data, col1, i_first, i_last, n_vals)  # x
+        fill_steps_in(data, col2, i_first, i_last, n_vals)  # y
+
+
+def get_distances(data, shorter = True):
+    """
+    Computes distances for [x1 y1 x2 y2 ...] and [x1_next y1_next x2_next y2_next...]
+    input: values in the format of extract_coordinates()
+    output: [dis1 dis2 ....]
+    careful: output array is one row shorter as input!
+    """
+    n_rows, n_cols = data.shape
+    assert n_cols % 2 == 0
+    assert n_cols > 1
+    # Get distances of all points between 2 frames
+    lastrow = data[data.shape[0] - 1]       # shift all data by one to the front, double the last row
+    data2 = np.vstack( (np.delete(data, 0, 0), lastrow) )
+    mov = data - data2                      # subract x_curr x_next
+    mov = mov**2                            # power
+    dist = np.sum(mov[:,[0,1]], axis = 1)   # add x and y to eachother
+    for i in range(1,int(n_cols/2)):        # do to the rest of the cols
+        dist = np.vstack((dist, np.sum(mov[:,[2*i,2*i + 1]], axis = 1) ))
+    dist = np.sqrt(dist.T)                  # take square root to gain distances
+
+    if shorter:
+        dist = dist[0:(dist.shape[0] - 1),]    # get rid of last column (it is 0)
+    return dist
+
+
 def interpolate_outliers(data, max_tolerated_movement=20):
     """
     input: values in the format of extract_coordinates()
     output: values in same format, without outlier values
     careful: this directly modifies your data
     """
+    print("Interpolate Outliers:")          # Announce this function loudly and passionatly
     n_rows, n_cols = data.shape
-    assert n_cols % 2 == 0
-    assert n_cols > 1
-    # Get distances of all points between 2 frames
-    lastrow = data[data.shape[0] - 1]       # shift all data by one to the front, double the last row
-    data2 = np.vstack( (np.delete(data, 0, 0), lastrow) )
-    mov = data - data2                      # subract x_curr x_next
-    mov = mov**2                            # power
-    dist = np.sum(mov[:,[0,1]], axis = 1)   # add x and y to eachother
-    for i in range(1,int(n_cols/2)):        # do to the rest of the cols
-        dist = np.vstack((dist, np.sum(mov[:,[2*i,2*i + 1]], axis = 1) ))
-    dist = np.sqrt(dist.T)                  # take square root to gain distances
 
-    dist = dist[0:(dist.shape[0] - 1),]    # get rid of last column (it is 0)
+    # Get distances of all points between 2 frames
+    dist = get_distances(data)
+
+    print("Before:")
     print("avg:", np.mean(dist, axis=0))
     print("max:", np.amax(dist, axis=0))
     print("min:", np.amin(dist, axis=0))
 
     assert n_rows >= 2
-    # For every column:
     for col in range(int(n_cols/2)):
-        # Get outliers of column
+        # Get outliers of specific column
         i_out =list( np.where(dist[:,col] > max_tolerated_movement)[0])
-        # column indices in shape
+        # column indices in 'data'
         col1, col2 = 2*col, 2*col + 1
 
         print(i_out)
         for outlier in i_out:
-            if outlier + 2 in i_out:
-                # This case is if the interpolation lead to outliers, since the positions outside of the nan values are too far away.
-                pass
-            else:
-                # correct outlier by replacing it with the value in the middle from points before and after it
-                assert outlier + 1 < n_rows
-                correct_outlier(data, col1, col2, outlier, max_tolerated_movement)
+            # recheck if outlier candidate is still valid, often when fixing an outlier you fix it for the next distance aswell
+            dis = functions.getDistance(data[outlier,col1], data[outlier,col2], data[outlier + 1,col1], data[outlier + 1,col2])
+            if abs(dis) > max_tolerated_movement:
+                if outlier + 1 in i_out and outlier + 2 in i_out:
+                    # This case is if the interpolation lead to outliers, since the positions outside of the nan values are too far away.
+                    # Get all frames which are behind each other+
+                    out_group = [outlier, outlier + 1, outlier + 2,]
+                    outlier += 2
+                    while outlier + 1 in i_out:
+                        out_group.append(outlier + 1)
+                        outlier += 1
+                    correct_wrongly_interpolated_outliers(data, col1, col2, out_group, max_tolerated_movement)
+                else:
+                    # correct outlier by replacing it with the value in the middle from points before and after it
+                    correct_outlier(data, col1, col2, outlier, max_tolerated_movement)
 
-    n_rows, n_cols = data.shape
-    assert n_cols % 2 == 0
-    assert n_cols > 1
-    # Get distances of all points between 2 frames
-    lastrow = data[data.shape[0] - 1]       # shift all data by one to the front, double the last row
-    data2 = np.vstack( (np.delete(data, 0, 0), lastrow) )
-    mov = data - data2                      # subract x_curr x_next
-    mov = mov**2                            # power
-    dist = np.sum(mov[:,[0,1]], axis = 1)   # add x and y to eachother
-    for i in range(1,int(n_cols/2)):        # do to the rest of the cols
-        dist = np.vstack((dist, np.sum(mov[:,[2*i,2*i + 1]], axis = 1) ))
-    dist = np.sqrt(dist.T)                  # take square root to gain distances
-
-    dist = dist[0:(dist.shape[0] - 1),]    # get rid of last column (it is 0)
+    # To check, we recalculate distances and look if there is any outliers still left
+    dist = get_distances(data)
+    print("After:")
     print("avg:", np.mean(dist, axis=0))
     print("max:", np.amax(dist, axis=0))
     print("min:", np.amin(dist, axis=0))
-    print(np.where(dist[:,0] > max_tolerated_movement))
+    print(np.where(dist[:,] > max_tolerated_movement))
 
 
 
