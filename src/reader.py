@@ -102,8 +102,6 @@ def extract_rows(file, nodes_to_extract, fish_to_extract = [0,1,2]):
 
         e_indices = e_indices + appendix
 
-    if(interpolate_missing_values):
-        return interpolate_missing_values(rtracks[:, e_indices])
     return rtracks[:, e_indices]
 
 
@@ -113,12 +111,11 @@ def interpolate_missing_values(data):
     output: values in same format, without nan rows
     careful: this directly modifies your data
     """
-    print("Interpolate Missing values:")
+    print("Interpolated missing values")
     n_row, n_col = data.shape
 
     # Iterate through every row for each column
     for col in range(n_col):
-        print("column {}".format(col))
 
         curr_row = 0
         last_not_nan_row = -1
