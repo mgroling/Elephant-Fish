@@ -190,7 +190,8 @@ def replace_point_by_middle(data, col, i1, i2, i3):
 
 def correct_outlier(data, col1, col2, i1, max_tolerated_movement):
     """
-    Rekursive function to correct outlier
+    Recursive function to adjust distance between i1 and i1+1 so that it is not marked as outliers.
+    Recursively removes outliers created this way
     I am pretty sure this is a more special case of correct_wrongly_interpolated_outliers. But refactoring is not the job now
     """
     n_rows, n_cols = data.shape
@@ -248,9 +249,9 @@ def correct_wrongly_interpolated_outliers(data, col1, col2, out_group, max_toler
     n_rows, n_cols = data.shape
     assert n_cols > 1
     assert len(out_group) > 2
+    i_first = out_group[0]
     if out_group[-1] + 1 < n_rows:
         # Interpolate values newly between first and last non outlier value
-        i_first = out_group[0]
         i_last = out_group[-1] + 1
         n_vals = len(out_group)
 
@@ -260,11 +261,16 @@ def correct_wrongly_interpolated_outliers(data, col1, col2, out_group, max_toler
         # Edge Case, you reached the end of the file (I wonder if this code will ever be executed)
         print("OH MY GOD, THIS REALLY HAS BEEN EXECUTED")
         # Take vector from last defined value
-        i_first = out_group[0]
         i_last = out_group[-1]
 
         fill_vector_in(data, col1, i_first, i_last)
         fill_vector_in(data, col2, i_first, i_last)
+
+    # Check if distance for first value has gotten better, (others are checked later anyway)
+    dis = functions.getDistance(data[i_first,col1], data[i_first,col2], data[i_first + 1,col1], data[i_first + 1,col2])
+    if abs(dis) > max_tolerated_movement:
+        # Enter fixing loop
+        correct_outlier(data, col1, col2, i_first, max_tolerated_movement)
 
 
 def get_distances(data, shorter = True):
@@ -316,7 +322,6 @@ def interpolate_outliers(data, max_tolerated_movement=20):
         # column indices in 'data'
         col1, col2 = 2*col, 2*col + 1
 
-        print(i_out)
         for outlier in i_out:
             # recheck if outlier candidate is still valid, often when fixing an outlier you fix it for the next distance aswell
             dis = functions.getDistance(data[outlier,col1], data[outlier,col2], data[outlier + 1,col1], data[outlier + 1,col2])
@@ -340,7 +345,7 @@ def interpolate_outliers(data, max_tolerated_movement=20):
     print("avg:", np.mean(dist, axis=0))
     print("max:", np.amax(dist, axis=0))
     print("min:", np.amin(dist, axis=0))
-    print(np.where(dist[:,] > max_tolerated_movement))
+    print("Outliers left: ", np.where(dist[:,] > max_tolerated_movement))
 
 
 
@@ -370,7 +375,7 @@ if __name__ == "__main__":
 
     output = extract_coordinates(file, [b'head',b'center'], fish_to_extract=[0])
     #output2 = extract_coordinates(file2, [b'head'], fish_to_extract=[0])
-    print(output[9145:9147,])
+    print(output.shape)
     #print(output2[9145:9147,])
     # print("First 20 rows")
     # print(output[0:20,:])
