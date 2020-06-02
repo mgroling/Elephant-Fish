@@ -55,7 +55,7 @@ def main():
     model.add(Dense(16))
     model.add(Dense(2))
     model.compile(loss='mean_squared_error', optimizer='adam')
-    model.fit(X_train, y_train, epochs=100, batch_size=10, verbose=2)
+    model.fit(X_train, y_train, epochs=100, batch_size=128, verbose=2)
 
     predict_test = model.predict(X_test)
     eval_df = pd.DataFrame(data = predict_test, columns = ["pred_linear_movement", "pred_angle_radians"])

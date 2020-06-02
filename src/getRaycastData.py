@@ -5,8 +5,6 @@ import numpy as np
 import os
 
 def main():
-    #for marc
-    os.chdir("SWP/Elephant-Fish")
 
     #Set variables
     COUNT_BINS_AGENTS = 21

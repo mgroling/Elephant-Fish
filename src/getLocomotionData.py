@@ -5,8 +5,6 @@ from reader import *
 from locomotion import getLocomotion
 
 def main():
-    #for marc
-    os.chdir("SWP/Elephant-Fish")
 
     file = "data/sleap_1_Diffgroup1-1.h5"
 
