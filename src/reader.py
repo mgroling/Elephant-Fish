@@ -4,6 +4,7 @@ import numpy as np
 import sys
 import scipy
 import locomotion
+import functions
 
 def read_slp(file, loud = False):
     """
@@ -44,9 +45,9 @@ def read_slp(file, loud = False):
         return (node_names[:], track_names[:], track_occupancy[:], tracks[:])
 
 
-def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2]):
+def extract_rows(file, nodes_to_extract, fish_to_extract = [0,1,2]):
     """
-    Extracts coordinates for given node names in file and returns pandas dataframe
+    Extracts specific rows for given sleap file and returns numpy array
     nodes_to_extract: String array containing at least one of: [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end']
     fish_to_extract: array containing the fishes you want to extract
     Output: nparray of form: [frames, [node0_fish0_x, node0_fish0_y, node1_fish0_x, node1_fish0_y, ..., node0_fish1_x, node0_fish1_y, ...]
@@ -101,12 +102,14 @@ def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2]):
 
         e_indices = e_indices + appendix
 
-    return interpolate_missing_values(rtracks[:, e_indices])
+    if(interpolate_missing_values):
+        return interpolate_missing_values(rtracks[:, e_indices])
+    return rtracks[:, e_indices]
 
 
 def interpolate_missing_values(data):
     """
-    input: values in the format of extract_coordinates()
+    input: values in the format of extract_rows()
     output: values in same format, without nan rows
     careful: this directly modifies your data
     """
@@ -167,8 +170,56 @@ def interpolate_missing_values(data):
     return data
 
 
+def replace_point_by_middle(data, col, i1, i_to_replace):
+    """
+    Replaces i_to_replace by the point in the middle of i1 and i1 + 2, if i1 + 2 does not exist,
+    it takes the vector from i1-1 i1 and adds it on i1
+    """
+    n_rows, n_cols = data.shape
+    if i1 + 2 < n_rows:
+        # Take middlepoint from value before and behind outlier as new value
+        midway = (data[i1 + 2, col] - data[i1 + 2, col])/2
+        newval = data[i1, col] - midway
+    else:
+        # Take difference from both values before and replace outlier with it
+        lastdiff = data[i1 - 1, col] - data[i1, col]
+        newval = data[i1, col] - lastdiff
+    data[i_to_replace, col] = newval
 
-def interpolate_outliers(data, max_tolerated_movement=12):
+
+def correct_outlier(data, col1, col2, i1, max_tolerated_movement):
+    """
+    Rekursive function to correct outlier
+    """
+    n_rows, n_cols = data.shape
+    assert i1 + 1 < n_rows
+    print("Outlier ", i1)
+
+    replace_point_by_middle(data, col1, i1, i1 + 1)
+    replace_point_by_middle(data, col2, i1, i1 + 1)
+
+    dis_1 = functions.getDistance(data[i1,col1], data[i1,col2], data[i1 + 1,col1], data[i1 + 1,col2])
+    if i1 + 2 < n_rows:
+        dis_2 = functions.getDistance(data[i1 + 1,col1], data[i1 + 1,col2], data[i1 + 2,col1], data[i1 + 2,col2])
+    if abs(dis_1) > max_tolerated_movement:
+        if i1 == 0:
+            # Edge case when you are at beginning, replace with value above
+            data[i1, col1] = data[i1 + 1, col1]
+            data[i1, col2] = data[i1 + 1, col2]
+        else:
+            # Recursively adjust values
+            correct_outlier(data, col1, col2, i1-1, max_tolerated_movement)
+    if i1 + 2 < n_rows and abs(dis_2) > max_tolerated_movement:
+        if i1 + 3 == n_rows:
+            # Edge case when you are at the start, replace with value below
+            data[i1 + 2, col1] = data[i1 + 1, col1]
+            data[i1 + 2, col2] = data[i1 + 1, col2]
+        else:
+            # Recursively adjust values
+            correct_outlier(data, col1, col2, i1+1, max_tolerated_movement)
+
+
+def interpolate_outliers(data, max_tolerated_movement=20):
     """
     input: values in the format of extract_coordinates()
     output: values in same format, without outlier values
@@ -191,13 +242,74 @@ def interpolate_outliers(data, max_tolerated_movement=12):
     print("avg:", np.mean(dist, axis=0))
     print("max:", np.amax(dist, axis=0))
     print("min:", np.amin(dist, axis=0))
-    print(np.where(dist > max_tolerated_movement))
+
+    assert n_rows >= 2
+    # For every column:
+    for col in range(int(n_cols/2)):
+        # Get outliers of column
+        i_out =list( np.where(dist[:,col] > max_tolerated_movement)[0])
+        # column indices in shape
+        col1, col2 = 2*col, 2*col + 1
+
+        print(i_out)
+        for outlier in i_out:
+            if outlier + 2 in i_out:
+                # This case is if the interpolation lead to outliers, since the positions outside of the nan values are too far away.
+                pass
+            else:
+                # correct outlier by replacing it with the value in the middle from points before and after it
+                assert outlier + 1 < n_rows
+                correct_outlier(data, col1, col2, outlier, max_tolerated_movement)
+
+    n_rows, n_cols = data.shape
+    assert n_cols % 2 == 0
+    assert n_cols > 1
+    # Get distances of all points between 2 frames
+    lastrow = data[data.shape[0] - 1]       # shift all data by one to the front, double the last row
+    data2 = np.vstack( (np.delete(data, 0, 0), lastrow) )
+    mov = data - data2                      # subract x_curr x_next
+    mov = mov**2                            # power
+    dist = np.sum(mov[:,[0,1]], axis = 1)   # add x and y to eachother
+    for i in range(1,int(n_cols/2)):        # do to the rest of the cols
+        dist = np.vstack((dist, np.sum(mov[:,[2*i,2*i + 1]], axis = 1) ))
+    dist = np.sqrt(dist.T)                  # take square root to gain distances
+
+    dist = dist[0:(dist.shape[0] - 1),]    # get rid of last column (it is 0)
+    print("avg:", np.mean(dist, axis=0))
+    print("max:", np.amax(dist, axis=0))
+    print("min:", np.amin(dist, axis=0))
+    print(np.where(dist[:,0] > max_tolerated_movement))
+
+
+
+def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2], interpolate_nans = True, interpolate_outlier = True):
+    """
+    Extracts specific rows for given sleap file and returns numpy array, cleaning up data if not specified otherwise
+    interpolate missing values will always be run if interpolate outliers is activated
+    nodes_to_extract: String array containing at least one of: [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end']
+    fish_to_extract: array containing the fishes you want to extract
+    Output: nparray of form: [frames, [node0_fish0_x, node0_fish0_y, node1_fish0_x, node1_fish0_y, ..., node0_fish1_x, node0_fish1_y, ...]
+    """
+    ret = extract_rows(file, nodes_to_extract, fish_to_extract)
+
+    if interpolate_nans or interpolate_outlier:
+        interpolate_missing_values(ret)
+
+    if interpolate_outlier:
+        interpolate_outliers(ret)
+
+    return ret
+
 
 
 if __name__ == "__main__":
     file = "data/sleap_1_Diffgroup1-1.h5"
+    file2= "data/test.h5"
 
-    output = extract_coordinates(file, [b'head'], fish_to_extract=[0])
+    output = extract_coordinates(file, [b'head',b'center'], fish_to_extract=[0])
+    #output2 = extract_coordinates(file2, [b'head'], fish_to_extract=[0])
+    print(output[9145:9147,])
+    #print(output2[9145:9147,])
     # print("First 20 rows")
     # print(output[0:20,:])
     # print("nan values")
@@ -219,6 +331,6 @@ if __name__ == "__main__":
     # print(output[0:20,:])
     # interpolate_missing_values(output)
 
-    woutlier = interpolate_outliers(output)
+    # woutlier = interpolate_outliers(output)
     #print(output.mean(axis = 0))
     #print(woutlier)
