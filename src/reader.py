@@ -300,6 +300,7 @@ def interpolate_outliers(data, max_tolerated_movement=20):
     input: values in the format of extract_coordinates()
     output: values in same format, without outlier values
     careful: this directly modifies your data
+    do not set max_tolerated_movement less then 16 (15.06) - it will not work :)
     """
     print("Interpolate Outliers:")          # Announce this function loudly and passionately
     n_rows, n_cols = data.shape
