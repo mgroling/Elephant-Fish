@@ -10,9 +10,6 @@ import os
 # Use python 3.6.10
 
 def main():
-    #for marc
-    os.chdir("SWP/Elephant-Fish")
-
     #Set Variables
     COUNT_BINS_AGENTS = 21
     COUNT_RAYS_WALLS = 15

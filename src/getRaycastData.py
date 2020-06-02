@@ -5,7 +5,6 @@ import numpy as np
 import os
 
 def main():
-
     #Set variables
     COUNT_BINS_AGENTS = 21
     WALL_RAYS_WALLS = 15

@@ -5,7 +5,6 @@ from reader import *
 from locomotion import getLocomotion
 
 def main():
-
     file = "data/sleap_1_Diffgroup1-1.h5"
 
     temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])
