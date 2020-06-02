@@ -10,7 +10,7 @@ def getLocomotion(np_array, path_to_save_to):
     The information about each given fish (or object in general) should be first_position_x, first_position_y, second_position_x, second_position_y.
     It is assumed that the fish is looking into the direction of first_positon_x - second_position_x for x and first_positon_y - second_position_y for y.
     """
-    output = np.array([list(chain.from_iterable(("Fish_" + str(i) + "_linear_speed", "Fish_" + str(i) + "_angle_radians") for i in range(0, int(np_array.shape[1]/4))))])
+    output = np.array([list(chain.from_iterable(("Fish_" + str(i) + "_linear_movement", "Fish_" + str(i) + "_angle_radians") for i in range(0, int(np_array.shape[1]/4))))])
 
     for i in range(0, np_array.shape[0]-1):
         if i%1000 == 0:
