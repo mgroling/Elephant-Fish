@@ -170,21 +170,22 @@ def interpolate_missing_values(data):
     return data
 
 
-def replace_point_by_middle(data, col, i1, i_to_replace):
+def replace_point_by_middle(data, col, i):
     """
-    Replaces i_to_replace by the point in the middle of i1 and i1 + 2, if i1 + 2 does not exist,
-    it takes the vector from i1-1 i1 and adds it on i1
+    Replaces i + 1 by the point in the middle of i and i + 2, if i1 + 2 does not exist,
+    it takes the vector from i-1 to i and adds it on i for i + 1
     """
     n_rows, n_cols = data.shape
-    if i1 + 2 < n_rows:
+    if i + 2 < n_rows:
         # Take middlepoint from value before and behind outlier as new value
-        midway = (data[i1 + 2, col] - data[i1 + 2, col])/2
-        newval = data[i1, col] - midway
+        midway = (data[i, col] - data[i + 2, col])/2
+        newval = data[i, col] - midway
     else:
         # Take difference from both values before and replace outlier with it
-        lastdiff = data[i1 - 1, col] - data[i1, col]
-        newval = data[i1, col] - lastdiff
-    data[i_to_replace, col] = newval
+        lastdiff = data[i - 1, col] - data[i, col]
+        newval = data[i, col] - lastdiff
+
+    data[i + 1, col] = newval
 
 
 def correct_outlier(data, col1, col2, i1, max_tolerated_movement):
@@ -193,10 +194,9 @@ def correct_outlier(data, col1, col2, i1, max_tolerated_movement):
     """
     n_rows, n_cols = data.shape
     assert i1 + 1 < n_rows
-    print("Outlier ", i1)
 
-    replace_point_by_middle(data, col1, i1, i1 + 1)
-    replace_point_by_middle(data, col2, i1, i1 + 1)
+    replace_point_by_middle(data, col1, i1)
+    replace_point_by_middle(data, col2, i1)
 
     dis_1 = functions.getDistance(data[i1,col1], data[i1,col2], data[i1 + 1,col1], data[i1 + 1,col2])
     if i1 + 2 < n_rows:
