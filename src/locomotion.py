@@ -27,11 +27,15 @@ def getLocomotion(np_array, path_to_save_to):
             center_x_next = np_array[i+1, j*4+2]
             center_y_next = np_array[i+1, j*4+3]
 
+            #look vector
             vector = (head_x - center_x, head_y - center_y)
-            vector_next = (head_x_next - center_x_next, head_y_next - center_y_next)
+            #vector to new position
+            vector_next = (head_x - head_x_next, head_y - head_y_next)
 
-            new_row[j*2] = getDistance(head_x, head_y, head_x_next, head_y_next)
             new_row[j*2+1] = getAngle(vector, vector_next, mode = "radians")
+            temp = getDistance(head_x, head_y, head_x_next, head_y_next)
+            #its forward movement if it's new position is not at the back of the fish and otherwise it is backward movement
+            new_row[j*2] = temp if new_row[j*2+1] > 90 and new_row[j*2+1] < 270 else -temp
         output = np.append(output, [new_row], axis = 0)
 
     df = pd.DataFrame(data = output[1:], columns = output[0])
