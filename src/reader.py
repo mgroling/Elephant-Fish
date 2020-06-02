@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import sys
 import scipy
+import locomotion
 
 def read_slp(file, loud = False):
     """
@@ -167,10 +168,36 @@ def interpolate_missing_values(data):
 
 
 
+def interpolate_outliers(data, max_tolerated_movement=12):
+    """
+    input: values in the format of extract_coordinates()
+    output: values in same format, without outlier values
+    careful: this directly modifies your data
+    """
+    n_rows, n_cols = data.shape
+    assert n_cols % 2 == 0
+    assert n_cols > 1
+    # Get distances of all points between 2 frames
+    lastrow = data[data.shape[0] - 1]       # shift all data by one to the front, double the last row
+    data2 = np.vstack( (np.delete(data, 0, 0), lastrow) )
+    mov = data - data2                      # subract x_curr x_next
+    mov = mov**2                            # power
+    dist = np.sum(mov[:,[0,1]], axis = 1)   # add x and y to eachother
+    for i in range(1,int(n_cols/2)):        # do to the rest of the cols
+        dist = np.vstack((dist, np.sum(mov[:,[2*i,2*i + 1]], axis = 1) ))
+    dist = np.sqrt(dist.T)                  # take square root to gain distances
+
+    dist = dist[0:(dist.shape[0] - 1),:]    # get rid of last column (it is 0)
+    print("avg:", np.mean(dist, axis=0))
+    print("max:", np.amax(dist, axis=0))
+    print("min:", np.amin(dist, axis=0))
+    print(np.where(dist > max_tolerated_movement))
+
+
 if __name__ == "__main__":
     file = "data/sleap_1_Diffgroup1-1.h5"
 
-    output = extract_coordinates(file, [b'head',b'center',b'tail_basis'], fish_to_extract=[0])
+    output = extract_coordinates(file, [b'head',b'center'], fish_to_extract=[0,1,2])
     # print("First 20 rows")
     # print(output[0:20,:])
     # print("nan values")
@@ -192,6 +219,6 @@ if __name__ == "__main__":
     # print(output[0:20,:])
     # interpolate_missing_values(output)
 
-    print(output)
-
-    print(np.where(np.isnan(output)))
+    woutlier = interpolate_outliers(output)
+    #print(output.mean(axis = 0))
+    #print(woutlier)
