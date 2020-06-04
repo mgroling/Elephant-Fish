@@ -25,7 +25,7 @@ def plot_locomotion(paths, path_to_save, round):
     #count the values and plot it
     ax = df_mov["value"].value_counts().sort_index().plot.bar()
     for i, t in enumerate(ax.get_xticklabels()):
-        if (i % 2) != 0:
+        if (i % 3) != 0:
             t.set_visible(False)
     fig = ax.get_figure()
     fig.set_size_inches(25, 12.5)
@@ -33,6 +33,9 @@ def plot_locomotion(paths, path_to_save, round):
 
     df_ang = df_all[ang_cols].melt(var_name = "columns", value_name = "value")
     ax = df_ang["value"].value_counts().sort_index().plot.bar()
+    for i, t in enumerate(ax.get_xticklabels()):
+        if (i % 3) != 0:
+            t.set_visible(True)
     fig = ax.get_figure()
     fig.set_size_inches(25, 12.5)
     fig.savefig(path_to_save + "plot_angle_radians.png")
