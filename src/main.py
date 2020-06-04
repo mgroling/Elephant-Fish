@@ -37,15 +37,18 @@ def main():
             X = np.append(X, np.append(np.append(arr_loc[:-1, i*2:(i+1)*2], arr_ray[1:-1, i*COUNT_BINS_AGENTS:(i+1)*COUNT_BINS_AGENTS], axis = 1), arr_ray[1:-1, COUNT_FISHES*COUNT_BINS_AGENTS+i*COUNT_RAYS_WALLS:COUNT_FISHES*COUNT_BINS_AGENTS+(i+1)*COUNT_RAYS_WALLS], axis = 1), axis = 0)
             y = np.append(y, arr_loc[1:, 0:2], axis = 0)
 
+    #split data into train and test
     X_train = X[:int(len(X)*0.8)]
     y_train = y[:int(len(X)*0.8)]
 
     X_test = X[int(len(X)*0.8):]
     y_test = y[int(len(X)*0.8):]
 
+    #reshape it for network input
     X_train = np.reshape(X_train, (X_train.shape[0], 1, X_train.shape[1]))
     X_test = np.reshape(X_test, (X_test.shape[0], 1, X_test.shape[1]))
 
+    #create model and fit it on training data
     model = Sequential()
     model.add(LSTM(64, input_shape=(1, X_train.shape[2]), dropout = 0.1, return_sequences = True))
     model.add(LSTM(32, input_shape=(1, X_train.shape[2]), dropout = 0.1))
@@ -54,6 +57,7 @@ def main():
     model.compile(loss='mean_squared_error', optimizer='adam')
     model.fit(X_train, y_train, epochs=100, batch_size=128, verbose=2)
 
+    #predict test data and evaluate results
     predict_test = model.predict(X_test)
     eval_df = pd.DataFrame(data = predict_test, columns = ["pred_linear_movement", "pred_angle_radians"])
     eval_df.insert(0, "linear_movement", y_test[:, 0], False)
@@ -76,9 +80,6 @@ def main():
     print("Median Error of linear movement: " + str(eval_df["ERROR_movement"].median()))
     print("Mean Error of angle (radians): " + str(eval_df["ERROR_angle"].mean()))
     print("Median Error of angle (radians): " + str(eval_df["ERROR_angle"].median()))
-
-    # Tensorflow magic
-
 
     # Wir brauchen noch eine Funktion die zur runtime raycasts bestimmt später für die analyse
 

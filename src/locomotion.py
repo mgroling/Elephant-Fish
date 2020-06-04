@@ -3,6 +3,7 @@ import pandas as pd
 import math
 from functions import getAngle, getDistance
 from itertools import chain
+from reader import *
 
 def getLocomotion(np_array, path_to_save_to):
     """
@@ -35,8 +36,24 @@ def getLocomotion(np_array, path_to_save_to):
             new_row[j*2+1] = getAngle(vector, vector_next, mode = "radians")
             temp = getDistance(head_x, head_y, head_x_next, head_y_next)
             #its forward movement if it's new position is not at the back of the fish and otherwise it is backward movement
-            new_row[j*2] = temp if new_row[j*2+1] > 90 and new_row[j*2+1] < 270 else -temp
+            new_row[j*2] = temp if new_row[j*2+1] > math.pi/2 and new_row[j*2+1] < 3/2*math.pi else -temp
         output = np.append(output, [new_row], axis = 0)
 
     df = pd.DataFrame(data = output[1:], columns = output[0])
     df.to_csv(path_to_save_to, index = None, sep = ";")
+
+def main():
+    file = "data/sleap_1_Diffgroup1-1.h5"
+
+    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])
+
+    #remove rows with Nans in it
+    temp = temp[~np.isnan(temp).any(axis=1)]
+
+    print("shape:",temp.shape)
+
+    #get locomotion and save it
+    getLocomotion(temp , "data/locomotion_data.csv")
+
+if __name__ == "__main__":
+    main()
