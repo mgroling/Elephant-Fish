@@ -58,7 +58,7 @@ def plot_follow(tracks, file = "data/follow.png", max_tolerated_movement=20, cou
     nfish = int(tracks.shape[-1] / 2)
 
     follow = []
-    # for every fish combination
+    # for every fish combination calculate the follow
     for i1 in range(nfish):
         for i2 in range(i1 + 1, nfish):
             f1_x, f1_y = get_indices(i1)
@@ -67,6 +67,7 @@ def plot_follow(tracks, file = "data/follow.png", max_tolerated_movement=20, cou
 
     follow = np.concatenate(follow, axis=0)
 
+    # Count how many values are in each bin
     step = max_tolerated_movement/count_bins
     bins = [x*step - max_tolerated_movement/2 for x in range(count_bins)] + [max_tolerated_movement/2]
     bin_labels = np.round([ x - max_tolerated_movement/2 + step/2 for x in range(count_bins - 1)], 2)
