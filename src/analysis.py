@@ -45,11 +45,10 @@ def calc_follow(a, b):
     """
     a_v = a[1:, :2] - a[:-1, :2]
     b_p = normalize_series(b[:-1, :2] - a[:-1, :2])
-    print(b_p)
     return (a_v * b_p).sum(axis=-1)
 
 
-def plot_follow(tracks, file = "data/follow.png", max_tolerated_movement=20, count_bins=21):
+def plot_follow(tracks, file = "data/follow.png", max_tolerated_movement=20):
     """
     Create and save Follow graph, only use center nodes for it
     count_bins is the number bins
@@ -67,17 +66,18 @@ def plot_follow(tracks, file = "data/follow.png", max_tolerated_movement=20, cou
 
     follow = np.concatenate(follow, axis=0)
 
-    # Count how many values are in each bin
-    step = max_tolerated_movement/count_bins
-    bins = [x*step - max_tolerated_movement/2 for x in range(count_bins)] + [max_tolerated_movement/2]
-    bin_labels = np.round([ x - max_tolerated_movement/2 + step/2 for x in range(count_bins - 1)], 2)
+    # Create bins for bars
+    bins_pos = [x + 0.5 for x in range(0, max_tolerated_movement)] + [max_tolerated_movement]
+    bins_neg = [x * -1 for x in reversed(bins_pos)]
+    bins = bins_neg + bins_pos
+    # Create labels
+    labels = list(range(-max_tolerated_movement, max_tolerated_movement + 1))
     valsToPlot = np.histogram(follow, bins=bins)[0]
-
-    # Plot the thing
+    # Set up plot
     y_pos = np.arange(len(valsToPlot))
+    print(y_pos)
     plt.bar(y_pos, valsToPlot)
-    # correct labels
-    plt.xticks(y_pos, bin_labels)
+    plt.xticks(y_pos, labels)
     plt.show()
 
 
