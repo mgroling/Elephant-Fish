@@ -45,7 +45,7 @@ def read_slp(file, loud = False):
         return (node_names[:], track_names[:], track_occupancy[:], tracks[:])
 
 
-def extract_rows(file, nodes_to_extract, fish_to_extract = [0,1,2]):
+def extract_rows(file, nodes_to_extract, fish_to_extract = [0,1,2], verbose = False):
     """
     Extracts specific rows for given sleap file and returns numpy array
     nodes_to_extract: String array containing at least one of: [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end']
@@ -60,13 +60,14 @@ def extract_rows(file, nodes_to_extract, fish_to_extract = [0,1,2]):
     n_frames = len(tracks[0,0,0,:])
     n_fishes = len(track_names[:])
 
-    print("File: ", file)
-    print("Nodes: ", len(node_names[:]))
-    print("Frames in video: ", )
-    print("Fish in dataset: ", n_fishes)
-    print("Fish - Tracked frames: ")
-    for x in range(n_fishes):
-        print("{} - {} frames".format(x, len(np.where(track_occupancy[:,x] == 1)[0] )))
+    if verbose:
+        print("File: ", file)
+        print("Nodes: ", len(node_names[:]))
+        print("Frames in video: ", )
+        print("Fish in dataset: ", n_fishes)
+        print("Fish - Tracked frames: ")
+        for x in range(n_fishes):
+            print("{} - {} frames".format(x, len(np.where(track_occupancy[:,x] == 1)[0] )))
 
     if max(fish_to_extract) >= n_fishes:
         print("Error: invalid fishes in argument fish_to_extract")
@@ -79,7 +80,8 @@ def extract_rows(file, nodes_to_extract, fish_to_extract = [0,1,2]):
     elif len(node_indices) != len(nodes_to_extract):
         print("Error: mapping node_names to nodes in file failed")
     else:
-        print("Node indices are ", node_indices)
+        if verbose:
+            print("Node indices are ", node_indices)
 
     # Put frames second, convert to 2d array
     tr = tracks.reshape(-1, tracks.shape[-1]).transpose()
@@ -105,13 +107,14 @@ def extract_rows(file, nodes_to_extract, fish_to_extract = [0,1,2]):
     return rtracks[:, e_indices]
 
 
-def interpolate_missing_values(data):
+def interpolate_missing_values(data, verbose = False):
     """
     input: values in the format of extract_rows()
     output: values in same format, without nan rows
     careful: this directly modifies your data
     """
-    print("Interpolated missing values")
+    if verbose:
+        print("Interpolated missing values")
     n_row, n_col = data.shape
 
     # Iterate through every row for each column
@@ -270,23 +273,25 @@ def correct_wrongly_interpolated_outliers(data, col1, col2, out_group, max_toler
         correct_outlier(data, col1, col2, i_first, max_tolerated_movement)
 
 
-def interpolate_outliers(data, max_tolerated_movement=20):
+def interpolate_outliers(data, max_tolerated_movement=20, verbose = False):
     """
     input: values in the format of extract_coordinates()
     output: values in same format, without outlier values
     careful: this directly modifies your data
     do not set max_tolerated_movement less then 16 (15.06) - it will not work :)
     """
-    print("Interpolate Outliers:")          # Announce this function loudly and passionately
+    if verbose:
+        print("Interpolate Outliers:")          # Announce this function loudly and passionately
     n_rows, n_cols = data.shape
 
     # Get distances of all points between 2 frames
     dist = functions.get_distances(data)
 
-    print("Before:")
-    print("avg:", np.mean(dist, axis=0))
-    print("max:", np.amax(dist, axis=0))
-    print("min:", np.amin(dist, axis=0))
+    if verbose:
+        print("Before:")
+        print("avg:", np.mean(dist, axis=0))
+        print("max:", np.amax(dist, axis=0))
+        print("min:", np.amin(dist, axis=0))
 
     assert n_rows >= 2
     for col in range(int(n_cols/2)):
@@ -313,16 +318,17 @@ def interpolate_outliers(data, max_tolerated_movement=20):
                     correct_outlier(data, col1, col2, outlier, max_tolerated_movement)
 
     # To check, we recalculate distances and look if there is any outliers still left
-    dist = functions.get_distances(data)
-    print("After:")
-    print("avg:", np.mean(dist, axis=0))
-    print("max:", np.amax(dist, axis=0))
-    print("min:", np.amin(dist, axis=0))
-    print("Outliers left: ", np.where(dist[:,] > max_tolerated_movement))
+    if verbose:
+        dist = functions.get_distances(data)
+        print("After:")
+        print("avg:", np.mean(dist, axis=0))
+        print("max:", np.amax(dist, axis=0))
+        print("min:", np.amin(dist, axis=0))
+        print("Outliers left: ", np.where(dist[:,] > max_tolerated_movement))
 
 
 
-def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2], interpolate_nans = True, interpolate_outlier = True):
+def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2], interpolate_nans = True, interpolate_outlier = True, verbose = False):
     """
     Extracts specific rows for given sleap file and returns numpy array, cleaning up data if not specified otherwise
     interpolate missing values will always be run if interpolate outliers is activated
@@ -330,13 +336,13 @@ def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2], inter
     fish_to_extract: array containing the fishes you want to extract
     Output: nparray of form: [frames, [node0_fish0_x, node0_fish0_y, node1_fish0_x, node1_fish0_y, ..., node0_fish1_x, node0_fish1_y, ...]
     """
-    ret = extract_rows(file, nodes_to_extract, fish_to_extract)
+    ret = extract_rows(file, nodes_to_extract, fish_to_extract, verbose=verbose)
 
     if interpolate_nans or interpolate_outlier:
-        interpolate_missing_values(ret)
+        interpolate_missing_values(ret, verbose=verbose)
 
     if interpolate_outlier:
-        interpolate_outliers(ret)
+        interpolate_outliers(ret, verbose=verbose)
 
     return ret
 
