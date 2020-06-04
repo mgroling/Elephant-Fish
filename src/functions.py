@@ -116,7 +116,14 @@ def get_distances(tracks):
     mov = mov**2                                            # power
     dist = np.atleast_2d(np.sum(mov[:,[0,1]], axis = 1))    # add x and y to eachother
     for i in range(1,int(n_cols/2)):                        # do to the rest of the cols
-        dist = np.vstack((dist, np.sum(mov[:,[2*i,2*i + 1]], axis = 1) ))
+        dist = np.vstack((dist, np.sum(mov[:,2*i:2*i + 2], axis = 1) ))
     dist = np.sqrt(dist.T)                                  # take square root to gain distances
 
     return dist
+
+
+def get_indices(i):
+    """
+    returns right indices for fishpositions
+    """
+    return (2*i, 2*i + 1)

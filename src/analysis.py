@@ -4,6 +4,8 @@
 from numpy import float32
 from numpy.linalg import norm
 import reader
+import matplotlib.pyplot as plt
+from functions import *
 
 
 def normalize_series(x):
@@ -47,13 +49,44 @@ def calc_follow(a, b):
     return (a_v * b_p).sum(axis=-1)
 
 
+def plot_follow(tracks, file = "data/follow.png", max_tolerated_movement=20, count_bins=21):
+    """
+    Create and save Follow graph, only use center nodes for it
+    count_bins is the number bins
+    """
+    assert tracks.shape[-1] % 2 == 0
+    nfish = int(tracks.shape[-1] / 2)
+
+    follow = []
+    # for every fish combination
+    for i1 in range(nfish):
+        for i2 in range(i1 + 1, nfish):
+            f1_x, f1_y = get_indices(i1)
+            f2_x, f2_y = get_indices(i2)
+            follow.append(calc_follow(tracks[:, f1_x:f1_y + 1], tracks[:, f2_x:f2_y + 1]))
+
+    follow = np.concatenate(follow, axis=0)
+
+    step = max_tolerated_movement/count_bins
+    bins = [x*step - max_tolerated_movement/2 for x in range(count_bins)] + [max_tolerated_movement/2]
+    bin_labels = np.round([ x - max_tolerated_movement/2 + step/2 for x in range(count_bins - 1)], 2)
+    valsToPlot = np.histogram(follow, bins=bins)[0]
+
+    # Plot the thing
+    y_pos = np.arange(len(valsToPlot))
+    plt.bar(y_pos, valsToPlot)
+    # correct labels
+    plt.xticks(y_pos, bin_labels)
+    plt.show()
+
+
 def main():
     file = "data/sleap_1_Diffgroup1-1.h5"
     fish1 = reader.extract_coordinates(file, [b'center'], [0])
     fish2 = reader.extract_coordinates(file, [b'center'], [1])
+    tracks = reader.extract_coordinates(file, [b'center'], [0,1,2])
 
-    follow = calc_follow(fish1, fish2)
-    print(follow)
+    plot_follow(tracks)
 
 
 if __name__ == "__main__":
