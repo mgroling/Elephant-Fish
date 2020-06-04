@@ -97,3 +97,26 @@ def getAngle(vector1, vector2, mode = "degrees"):
         angle = 360 - angle
 
     return angle if mode == "degrees" else math.radians(angle)
+
+
+def get_distances(tracks):
+    """
+    Computes distances for [x1 y1 x2 y2 ...] and [x1_next y1_next x2_next y2_next...]
+    input: values in the format of extract_coordinates()
+    output: [[dis1 dis2 ....]]
+    careful: output array is one row shorter as input!
+    """
+    n_rows, n_cols = tracks.shape
+    assert n_cols % 2 == 0
+    assert n_cols > 1
+    # Get distances of all points between 2 frames
+    tracks1 = tracks[0:-1,]
+    tracks2 = tracks[1:,]
+    mov = tracks1 - tracks2                                 # subract x_curr x_next
+    mov = mov**2                                            # power
+    dist = np.atleast_2d(np.sum(mov[:,[0,1]], axis = 1))    # add x and y to eachother
+    for i in range(1,int(n_cols/2)):                        # do to the rest of the cols
+        dist = np.vstack((dist, np.sum(mov[:,[2*i,2*i + 1]], axis = 1) ))
+    dist = np.sqrt(dist.T)                                  # take square root to gain distances
+
+    return dist

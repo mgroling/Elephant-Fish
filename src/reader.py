@@ -270,31 +270,6 @@ def correct_wrongly_interpolated_outliers(data, col1, col2, out_group, max_toler
         correct_outlier(data, col1, col2, i_first, max_tolerated_movement)
 
 
-def get_distances(data, shorter = True):
-    """
-    Computes distances for [x1 y1 x2 y2 ...] and [x1_next y1_next x2_next y2_next...]
-    input: values in the format of extract_coordinates()
-    output: [[dis1 dis2 ....]]
-    careful: output array is one row shorter as input!
-    """
-    n_rows, n_cols = data.shape
-    assert n_cols % 2 == 0
-    assert n_cols > 1
-    # Get distances of all points between 2 frames
-    lastrow = data[data.shape[0] - 1]       # shift all data by one to the front, double the last row
-    data2 = np.vstack( (np.delete(data, 0, 0), lastrow) )
-    mov = data - data2                      # subract x_curr x_next
-    mov = mov**2                            # power
-    dist = np.atleast_2d(np.sum(mov[:,[0,1]], axis = 1))   # add x and y to eachother
-    for i in range(1,int(n_cols/2)):        # do to the rest of the cols
-        dist = np.vstack((dist, np.sum(mov[:,[2*i,2*i + 1]], axis = 1) ))
-    dist = np.sqrt(dist.T)                  # take square root to gain distances
-
-    if shorter:
-        dist = dist[0:(dist.shape[0] - 1),]    # get rid of last column (it is 0)
-    return dist
-
-
 def interpolate_outliers(data, max_tolerated_movement=20):
     """
     input: values in the format of extract_coordinates()
@@ -306,7 +281,7 @@ def interpolate_outliers(data, max_tolerated_movement=20):
     n_rows, n_cols = data.shape
 
     # Get distances of all points between 2 frames
-    dist = get_distances(data)
+    dist = functions.get_distances(data)
 
     print("Before:")
     print("avg:", np.mean(dist, axis=0))
@@ -338,7 +313,7 @@ def interpolate_outliers(data, max_tolerated_movement=20):
                     correct_outlier(data, col1, col2, outlier, max_tolerated_movement)
 
     # To check, we recalculate distances and look if there is any outliers still left
-    dist = get_distances(data)
+    dist = functions.get_distances(data)
     print("After:")
     print("avg:", np.mean(dist, axis=0))
     print("max:", np.amax(dist, axis=0))
