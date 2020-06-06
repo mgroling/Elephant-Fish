@@ -133,12 +133,21 @@ def plot_positions(track, track2 = None):
         points.set_xdata(track[n,i_x])
         points.set_ydata(track[n,i_y])
 
+    def update_points2(n, track, track2, points, points2):
+        points.set_xdata(track[n,i_x])
+        points.set_ydata(track[n,i_y])
+        points2.set_xdata(track2[n,i_x])
+        points2.set_ydata(track2[n,i_y])
 
-    points, = plt.plot([], [], 'r.')
     plt.xlim(0, 960)
     plt.ylim(9,720)
 
-    point_animation = animation.FuncAnimation(fig, update_points, track.shape[0],fargs=(track, points), interval=10)
+    points, = plt.plot([], [], 'r.')
+    if track2 is None:
+        point_animation = animation.FuncAnimation(fig, update_points, track.shape[0],fargs=(track, points), interval=10)
+    else:
+        points2, = plt.plot([], [], 'b.')
+        point_animation = animation.FuncAnimation(fig, update_points2, track.shape[0],fargs=(track, track2, points, points2), interval=10)
 
     plt.show()
 
@@ -148,9 +157,10 @@ def main():
     # fish1 = reader.extract_coordinates(file, [b'center'], [0])
     # fish2 = reader.extract_coordinates(file, [b'center'], [1])
     tracks = reader.extract_coordinates(file, [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'], [0,1,2])
+    tracks2 = reader.extract_coordinates(file, [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'], [0,1,2], interpolate_nans=False, interpolate_outlier=False)
 
     # plot_follow(tracks)
-    plot_positions(tracks)
+    plot_positions(tracks, tracks2)
 
 
 if __name__ == "__main__":
