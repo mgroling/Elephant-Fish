@@ -43,7 +43,7 @@ def getLocomotion(np_array, path_to_save_to):
     df.to_csv(path_to_save_to, index = None, sep = ";")
 
 def main():
-    file = "data/sleap_1_Diffgroup1-1.h5"
+    file = "data/sleap_1_diff1.h5"
 
     temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])
 

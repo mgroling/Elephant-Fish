@@ -349,7 +349,7 @@ def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2], inter
 
 
 if __name__ == "__main__":
-    file = "data/sleap_1_Diffgroup1-1.h5"
+    file = "data/sleap_1_diff1.h5"
 
     output = extract_coordinates(file, [b'head',b'center'], fish_to_extract=[0])
     #output2 = extract_coordinates(file2, [b'head'], fish_to_extract=[0])
