@@ -1,13 +1,14 @@
 # File to analyse the results
 # Copied from Moritz Maxeiner Masterthesis: https://git.imp.fu-berlin.de/bioroboticslab/robofish/ai
 
-import reader
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from functions import *
+import seaborn
 import pandas as pd
 import numpy as np
 
+import reader
+from functions import *
 
 def normalize_series(x):
     """
@@ -49,7 +50,7 @@ def calc_follow(a, b):
     return (a_v * b_p).sum(axis=-1)
 
 
-def plot_follow(tracks, file = "figures/follow.png", max_tolerated_movement=20):
+def plot_follow(tracks, max_tolerated_movement=20):
     """
     Create and save Follow graph, only use center nodes for it
     count_bins is the number bins
@@ -64,6 +65,7 @@ def plot_follow(tracks, file = "figures/follow.png", max_tolerated_movement=20):
             f1_x, f1_y = get_indices(i1)
             f2_x, f2_y = get_indices(i2)
             follow.append(calc_follow(tracks[:, f1_x:f1_y + 1], tracks[:, f2_x:f2_y + 1]))
+            follow.append(calc_follow(tracks[:, f2_x:f2_y + 1], tracks[:, f1_x:f1_y + 1]))
 
     follow = np.concatenate(follow, axis=0)
 
@@ -83,6 +85,42 @@ def plot_follow(tracks, file = "figures/follow.png", max_tolerated_movement=20):
     plt.plot()
     return plt.gcf()
 
+
+def plot_follow_iid(tracks):
+    """
+    plots fancy graph with follow and iid, only use with center values
+    copied from Moritz Maxeiner
+    """
+
+    assert tracks.shape[-1] % 2 == 0
+    nfish = int(tracks.shape[-1] / 2)
+
+    follow = []
+    iid = []
+
+    # for every fish combination calculate the follow
+    for i1 in range(nfish):
+        for i2 in range(i1 + 1, nfish):
+            f1_x, f1_y = get_indices(i1)
+            f2_x, f2_y = get_indices(i2)
+            iid.append(calc_iid(tracks[:-1, f1_x:f1_y + 1], tracks[:-1, f2_x:f2_y + 1]))
+            iid.append(iid[-1])
+
+            follow.append(calc_follow(tracks[:, f1_x:f1_y + 1], tracks[:, f2_x:f2_y + 1]))
+            follow.append(calc_follow(tracks[:, f2_x:f2_y + 1], tracks[:, f1_x:f1_y + 1]))
+
+    follow_iid_data = pd.DataFrame(
+        {"IID [cm]": np.concatenate(iid, axis=0), "Follow": np.concatenate(follow, axis=0)}
+    )
+
+    grid = seaborn.jointplot(
+        x="IID [cm]", y="Follow", data=follow_iid_data, linewidth=0, s=1, kind="scatter"
+    )
+    grid.ax_joint.set_xlim(0, 142)
+    grid.fig.set_figwidth(9)
+    grid.fig.set_figheight(6)
+    grid.fig.subplots_adjust(top=0.9)
+    return grid.fig
 
 
 def plot_locomotion(paths, path_to_save, round):
@@ -169,11 +207,12 @@ def main():
     file = "data/sleap_1_Diffgroup1-1.h5"
     # fish1 = reader.extract_coordinates(file, [b'center'], [0])
     # fish2 = reader.extract_coordinates(file, [b'center'], [1])
-    tracks = reader.extract_coordinates(file, [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'], [0,1,2])
-    tracks2 = reader.extract_coordinates(file, [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'], [0,1,2], interpolate_nans=False, interpolate_outlier=False)
+    # tracks = reader.extract_coordinates(file, [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'], [0,1,2])
+    # tracks2 = reader.extract_coordinates(file, [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'], [0,1,2], interpolate_nans=False, interpolate_outlier=False)
+    tracks = reader.extract_coordinates(file, [b'center'])
 
-    fig = plot_follow(tracks)
-    save_figure(fig)
+    fig = plot_follow_iid(tracks)
+    save_figure(fig, "figures/follow_iid.png")
     # plot_positions(tracks, tracks2)
 
 
