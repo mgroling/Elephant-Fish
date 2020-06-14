@@ -49,7 +49,7 @@ def calc_follow(a, b):
     return (a_v * b_p).sum(axis=-1)
 
 
-def plot_follow(tracks, file = "data/follow.png", max_tolerated_movement=20):
+def plot_follow(tracks, file = "figures/follow.png", max_tolerated_movement=20):
     """
     Create and save Follow graph, only use center nodes for it
     count_bins is the number bins
@@ -76,10 +76,13 @@ def plot_follow(tracks, file = "data/follow.png", max_tolerated_movement=20):
     valsToPlot = np.histogram(follow, bins=bins)[0]
     # Set up plot
     y_pos = np.arange(len(valsToPlot))
-    print(y_pos)
+
     plt.bar(y_pos, valsToPlot)
     plt.xticks(y_pos, labels)
-    plt.show()
+
+    plt.plot()
+    return plt.gcf()
+
 
 
 def plot_locomotion(paths, path_to_save, round):
@@ -116,6 +119,16 @@ def plot_locomotion(paths, path_to_save, round):
     fig = ax.get_figure()
     fig.set_size_inches(25, 12.5)
     fig.savefig(path_to_save + "plot_angle_radians.png")
+
+
+def save_figure(fig, path = "figures/latest_plot.png", size = (25, 12.5)):
+    """
+    Saves the given figure in path with certain size
+    """
+    x, y = size
+    fig.set_size_inches(x, y)
+    fig.savefig(path)
+    plt.close(fig)
 
 
 def plot_positions(track, track2 = None):
@@ -159,8 +172,9 @@ def main():
     tracks = reader.extract_coordinates(file, [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'], [0,1,2])
     tracks2 = reader.extract_coordinates(file, [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'], [0,1,2], interpolate_nans=False, interpolate_outlier=False)
 
-    # plot_follow(tracks)
-    plot_positions(tracks, tracks2)
+    fig = plot_follow(tracks)
+    save_figure(fig)
+    # plot_positions(tracks, tracks2)
 
 
 if __name__ == "__main__":
