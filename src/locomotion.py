@@ -1,9 +1,10 @@
 import numpy as np
 import pandas as pd
 import math
-from functions import getAngle, getDistance
+from functions import getAngle, getDistance, readClusters
 from itertools import chain
 from reader import *
+from sklearn.cluster import KMeans
 
 def getLocomotion(np_array, path_to_save_to):
     """
@@ -45,18 +46,77 @@ def getLocomotion(np_array, path_to_save_to):
     df = pd.DataFrame(data = output[1:], columns = output[0])
     df.to_csv(path_to_save_to, index = None, sep = ";")
 
+def convertLocmotionToBin(path, path_to_save, clusters_path, probabilities = True):
+    #get cluster centers
+    clusters_mov, clusters_pos, clusters_ori = readClusters(clusters_path)
+
+    #get locomotion
+    df = pd.read_csv(path, sep = ";")
+    loco = df.to_numpy()
+
+    result = None
+    #convert locomotion into bin representation for each fish
+    for i in range(0, int(loco.shape[1]/3)):
+        if probabilities:
+            #compute distances to cluster centers and invert them (1/x)
+            dist_mov = 1 / distancesToClusters(loco[:, i*3], clusters_mov)
+            dist_pos = 1 / distancesToClusters(loco[:, i*3+1], clusters_pos)
+            dist_ori = 1 / distancesToClusters(loco[:, i*3+2], clusters_ori)
+
+            #get probabilites row-wise with softmax function and append header
+            prob_mov = np.append(np.array([["Fish_" + str(i) + "_prob_mov_bin_" + str(j) for j in range(0, len(clusters_mov))]]), softmax(dist_mov), axis = 0)
+            prob_pos = np.append(np.array([["Fish_" + str(i) + "_prob_pos_bin_" + str(j) for j in range(0, len(clusters_pos))]]), softmax(dist_pos), axis = 0)
+            prob_ori = np.append(np.array([["Fish_" + str(i) + "_prob_ori_bin_" + str(j) for j in range(0, len(clusters_ori))]]), softmax(dist_ori), axis = 0)
+            
+            temp = np.append(np.append(prob_mov, prob_pos, axis = 1), prob_ori, axis = 1)
+            if i == 0:
+                result = temp
+            else:
+                result = np.append(result, temp , axis = 1)
+        else:
+            #todo
+            pass
+    
+    #save it
+    df = pd.DataFrame(data = result[1:], columns = result[0])
+    df.to_csv(path_to_save, sep = ";")
+
+def distancesToClusters(points, clusters):
+    """
+    computes distances from all points to all clusters
+    not sure if this works for non 1d data
+    """
+    distances = None
+    for j in range(0, len(clusters)):
+        temp = np.abs(points - float(clusters[j])).reshape(-1, 1)
+        if j == 0:
+            distances = temp
+        else: 
+            distances = np.append(distances, temp, axis = 1)
+    
+    return distances
+
+def softmax(np_array):
+    """
+    Compute softmax values row-wise (probabilites)
+    """
+    temp = np.exp(np_array - np.max(np_array, axis = 1).reshape(-1, 1))
+    return np.divide(temp, np.sum(temp, axis = 1).reshape(-1, 1))
+
 def main():
-    file = "data/sleap_1_Diffgroup1-1.h5"
+    # file = "data/sleap_1_Diffgroup1-1.h5"
 
-    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])
+    # temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])
 
-    #remove rows with Nans in it
-    temp = temp[~np.isnan(temp).any(axis=1)]
+    # #remove rows with Nans in it
+    # temp = temp[~np.isnan(temp).any(axis=1)]
 
-    print("shape:",temp.shape)
+    # print("shape:",temp.shape)
 
-    #get locomotion and save it
-    getLocomotion(temp , "data/locomotion_data.csv")
+    # #get locomotion and save it
+    # getLocomotion(temp , "data/locomotion_data.csv")
+
+    convertLocmotionToBin("data/locomotion_data.csv", "data/locomotion_data_bin.csv", "data/clusters.txt")
 
 if __name__ == "__main__":
     main()

@@ -128,7 +128,7 @@ def plot_locomotion(paths, path_to_save, round):
     fig.set_size_inches(25, 12.5)
     fig.savefig(path_to_save + "plot_angle_change_orientation.png")
 
-def getClusters(paths, path_to_save, round, count_clusters = (20, 20, 20)):
+def getClusters(paths, path_to_save, count_clusters = (20, 20, 20)):
     """
     paths should be iterable
     path_to_save is the folder in which it will be saved
@@ -140,8 +140,6 @@ def getClusters(paths, path_to_save, round, count_clusters = (20, 20, 20)):
     for path in paths:
         df_list.append(pd.read_csv(path, sep = ";"))
     df_all = pd.concat(df_list)
-    #round values
-    df_all = df_all.round(round)
 
     #get all linear_movement columns respectivly all angle columns
     mov_cols = [col for col in df_all.columns if "linear_movement" in col]
@@ -173,7 +171,7 @@ def main():
 
     # plot_follow(tracks)
 
-    getClusters(["data/locomotion_data.csv"], "data/", 2, (15, 20, 17))
+    getClusters(["data/locomotion_data.csv"], "data/", (15, 20, 17))
 
 if __name__ == "__main__":
     main()
