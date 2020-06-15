@@ -128,12 +128,12 @@ def plot_locomotion(paths, path_to_save, round):
     fig.set_size_inches(25, 12.5)
     fig.savefig(path_to_save + "plot_angle_change_orientation.png")
 
-def getClusters(paths, path_to_save, round, count_clusters):
+def getClusters(paths, path_to_save, round, count_clusters = (20, 20, 20)):
     """
     paths should be iterable
     path_to_save is the folder in which it will be saved
     round will round to one decimal place (round = 2 -> all values will be of the form x.yz)
-    Finds count_clusters cluster centers for the dataframes (for mov, pos, ori) and saves these clusters
+    Finds cluster centers for the dataframes (for mov, pos, ori) (count_clusters should be a tuple with (count_clusters_mov, count_clusters_pos, count_clusters_ori)) and saves these clusters
     """
     #right now it thinks that 0 and 2*pi are not the same for pos and ori, maybe find a solution for it
     df_list = []
@@ -152,14 +152,18 @@ def getClusters(paths, path_to_save, round, count_clusters):
     df_pos = df_all[ang_pos_cols].melt(var_name = "columns", value_name = "value")
     df_ori = df_all[ang_ori_cols].melt(var_name = "columns", value_name = "value")
 
-    kmeans_mov = KMeans(n_clusters = count_clusters).fit(df_mov["value"].to_numpy().reshape(-1, 1))
-    kmeans_pos = KMeans(n_clusters = count_clusters).fit(df_pos["value"].to_numpy().reshape(-1, 1))
-    kmeans_ori = KMeans(n_clusters = count_clusters).fit(df_ori["value"].to_numpy().reshape(-1, 1))
+    kmeans_mov = KMeans(n_clusters = count_clusters[0]).fit(df_mov["value"].to_numpy().reshape(-1, 1))
+    kmeans_pos = KMeans(n_clusters = count_clusters[1]).fit(df_pos["value"].to_numpy().reshape(-1, 1))
+    kmeans_ori = KMeans(n_clusters = count_clusters[2]).fit(df_ori["value"].to_numpy().reshape(-1, 1))
 
-    np_array = np.append(np.append(np.array(kmeans_mov.cluster_centers_), np.array(kmeans_pos.cluster_centers_), axis = 1), np.array(kmeans_ori. cluster_centers_), axis = 1)
-
-    df_clusters = pd.DataFrame(data = np_array, columns = ["clusters_mov", "clusters_pos", "clusters_ori"])
-    df_clusters.to_csv(path_to_save + "clusters.csv", sep = ";")
+    with open(path_to_save + "clusters.txt", "w+") as f:
+        f.write("count_clusters(mov, pos, ori)\n" + str(count_clusters) + "\n")
+        for elem in kmeans_mov.cluster_centers_:
+            f.write(str(float(elem)) +"\n")
+        for elem in kmeans_pos.cluster_centers_:
+            f.write(str(float(elem)) +"\n")
+        for elem in kmeans_ori.cluster_centers_:
+            f.write(str(float(elem)) +"\n")
 
 def main():
     # file = "data/sleap_1_Diffgroup1-1.h5"
@@ -168,8 +172,8 @@ def main():
     # tracks = reader.extract_coordinates(file, [b'center'], [0,1,2])
 
     # plot_follow(tracks)
-    getClusters(["data/locomotion_data.csv"], "data/", 2, 20)
 
+    getClusters(["data/locomotion_data.csv"], "data/", 2, (15, 20, 17))
 
 if __name__ == "__main__":
     main()

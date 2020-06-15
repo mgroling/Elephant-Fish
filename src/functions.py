@@ -127,3 +127,24 @@ def get_indices(i):
     returns right indices for fishpositions
     """
     return (2*i, 2*i + 1)
+
+def readClusters(path):
+    """
+    reads saved clusters from the getClusters function and returns a dictionary for each cluster with its number in the file and the key value
+    returns in order dict_mov, dict_pos, dict_ori
+    """
+    with open(path, "r") as f:
+        content = f.readlines()
+    
+    content = [x.strip() for x in content]
+    count_clusters = tuple(map(int, content[1][1:-1].split(', '))) 
+
+    mov_clusters = content[2:2+count_clusters[0]]
+    pos_clusters = content[2+count_clusters[0]:2+count_clusters[0]+count_clusters[1]]
+    ori_clusters = content[2+count_clusters[0]+count_clusters[1]:2+count_clusters[0]+count_clusters[1]+count_clusters[2]]
+    
+    dict_mov = {i: mov_clusters[i] for i in range(0, len(mov_clusters))}
+    dict_pos = {i: pos_clusters[i] for i in range(0, len(pos_clusters))}
+    dict_ori = {i: ori_clusters[i] for i in range(0, len(ori_clusters))}
+
+    return dict_mov, dict_pos, dict_ori

@@ -1,3 +1,4 @@
+from functions import *
 from raycasts import *
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, BatchNormalization
@@ -28,10 +29,7 @@ def main():
     arr_loc = df_loc.to_numpy()
 
     #create dictionaries for locomotion clusters
-    df_clusters = pd.read_csv("data/clusters.csv", sep = ";")
-    dict_mov = {i: df_clusters["clusters_mov"] for i in range(0, len(df_clusters["clusters_mov"]))}
-    dict_pos = {i: df_clusters["clusters_pos"] for i in range(0, len(df_clusters["clusters_pos"]))}
-    dict_ori = {i: df_clusters["clusters_ori"] for i in range(0, len(df_clusters["clusters_ori"]))}
+    dict_mov, dict_pos, dict_ori = readClusters("data/clusters.txt")
 
     #convert locomotion data into bin representation
     for i in range(0, arr_loc.shape[0]):
