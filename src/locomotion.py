@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import math
-from functions import getAngle, getDistance, readClusters
+from functions import getAngle, getDistance, readClusters, distancesToClusters, softmax
 from itertools import chain
 from reader import *
 from sklearn.cluster import KMeans
@@ -81,28 +81,6 @@ def convertLocmotionToBin(path, path_to_save, clusters_path, probabilities = Tru
     df = pd.DataFrame(data = result[1:], columns = result[0])
     df.to_csv(path_to_save, sep = ";")
 
-def distancesToClusters(points, clusters):
-    """
-    computes distances from all points to all clusters
-    not sure if this works for non 1d data
-    """
-    distances = None
-    for j in range(0, len(clusters)):
-        temp = np.abs(points - float(clusters[j])).reshape(-1, 1)
-        if j == 0:
-            distances = temp
-        else: 
-            distances = np.append(distances, temp, axis = 1)
-    
-    return distances
-
-def softmax(np_array):
-    """
-    Compute softmax values row-wise (probabilites)
-    """
-    temp = np.exp(np_array - np.max(np_array, axis = 1).reshape(-1, 1))
-    return np.divide(temp, np.sum(temp, axis = 1).reshape(-1, 1))
-
 def main():
     # file = "data/sleap_1_diff1.h5"
     # file = "data/sleap_1_Diffgroup1-1.h5"
@@ -117,7 +95,8 @@ def main():
     # #get locomotion and save it
     # getLocomotion(temp , "data/locomotion_data.csv")
 
-    # convertLocmotionToBin("data/locomotion_data.csv", "data/locomotion_data_bin.csv", "data/clusters.txt")
+    convertLocmotionToBin("data/locomotion_data.csv", "data/locomotion_data_bin.csv", "data/clusters.txt")
+
 
 if __name__ == "__main__":
     main()

@@ -143,3 +143,25 @@ def readClusters(path):
     ori_clusters = content[2+count_clusters[0]+count_clusters[1]:2+count_clusters[0]+count_clusters[1]+count_clusters[2]]
 
     return mov_clusters, pos_clusters, ori_clusters
+
+def distancesToClusters(points, clusters):
+    """
+    computes distances from all points to all clusters
+    not sure if this works for non 1d data
+    """
+    distances = None
+    for j in range(0, len(clusters)):
+        temp = np.abs(points - float(clusters[j])).reshape(-1, 1)
+        if j == 0:
+            distances = temp
+        else: 
+            distances = np.append(distances, temp, axis = 1)
+    
+    return distances
+
+def softmax(np_array):
+    """
+    Compute softmax values row-wise (probabilites)
+    """
+    temp = np.exp(np_array - np.max(np_array, axis = 1).reshape(-1, 1))
+    return np.divide(temp, np.sum(temp, axis = 1).reshape(-1, 1))
