@@ -1,3 +1,4 @@
+from functions import *
 from raycasts import *
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, BatchNormalization
@@ -17,6 +18,7 @@ def main():
     RADIUS_FIELD_OF_VIEW_AGENTS = 300
     MAX_VIEW_RANGE = 600
     COUNT_FISHES = 3
+    N_CLUSTERS = 20
 
     #get raycast data (input)
     df_ray = pd.read_csv("data/raycast_data.csv", sep = ";")
@@ -26,16 +28,26 @@ def main():
     df_loc = pd.read_csv("data/locomotion_data.csv", sep = ";")
     arr_loc = df_loc.to_numpy()
 
+    #create dictionaries for locomotion clusters
+    dict_mov, dict_pos, dict_ori = readClusters("data/clusters.txt")
+
+    #convert locomotion data into bin representation
+    for i in range(0, arr_loc.shape[0]):
+        for j in range(0, int(arr_loc.shape[1]/3)):
+            #todo
+            pass
+
     #create input/output data to feed to the network
     X = None
     y = None
     for i in range(0, COUNT_FISHES):
         if i == 0:
-            X = np.append(np.append(arr_loc[:-1, i*2:(i+1)*2], arr_ray[1:-1, i*COUNT_BINS_AGENTS:(i+1)*COUNT_BINS_AGENTS], axis = 1), arr_ray[1:-1, COUNT_FISHES*COUNT_BINS_AGENTS+i*COUNT_RAYS_WALLS:COUNT_FISHES*COUNT_BINS_AGENTS+(i+1)*COUNT_RAYS_WALLS], axis = 1)
-            y = arr_loc[1:, 0:2]
+            X = np.append(np.append(arr_loc[:-1, i*3:(i+1)*3], arr_ray[1:-1, i*COUNT_BINS_AGENTS:(i+1)*COUNT_BINS_AGENTS], axis = 1), arr_ray[1:-1, COUNT_FISHES*COUNT_BINS_AGENTS+i*COUNT_RAYS_WALLS:COUNT_FISHES*COUNT_BINS_AGENTS+(i+1)*COUNT_RAYS_WALLS], axis = 1)
+            y = arr_loc[1:, i*3:(i+1)*3]
         else:
-            X = np.append(X, np.append(np.append(arr_loc[:-1, i*2:(i+1)*2], arr_ray[1:-1, i*COUNT_BINS_AGENTS:(i+1)*COUNT_BINS_AGENTS], axis = 1), arr_ray[1:-1, COUNT_FISHES*COUNT_BINS_AGENTS+i*COUNT_RAYS_WALLS:COUNT_FISHES*COUNT_BINS_AGENTS+(i+1)*COUNT_RAYS_WALLS], axis = 1), axis = 0)
-            y = np.append(y, arr_loc[1:, 0:2], axis = 0)
+            X = np.append(X, np.append(np.append(arr_loc[:-1, i*3:(i+1)*3], arr_ray[1:-1, i*COUNT_BINS_AGENTS:(i+1)*COUNT_BINS_AGENTS], axis = 1), arr_ray[1:-1, COUNT_FISHES*COUNT_BINS_AGENTS+i*COUNT_RAYS_WALLS:COUNT_FISHES*COUNT_BINS_AGENTS+(i+1)*COUNT_RAYS_WALLS], axis = 1), axis = 0)
+            y = np.append(y, arr_loc[1:, i*3:(i+1)*3], axis = 0)
+
 
     #split data into train and test
     X_train = X[:int(len(X)*0.8)]

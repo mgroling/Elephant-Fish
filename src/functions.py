@@ -127,3 +127,19 @@ def get_indices(i):
     returns right indices for fishpositions
     """
     return (2*i, 2*i + 1)
+
+def readClusters(path):
+    """
+    reads saved clusters from the getClusters function and returns a list for each locomotion type, they are sorted like in the file
+    """
+    with open(path, "r") as f:
+        content = f.readlines()
+    
+    content = [x.strip() for x in content]
+    count_clusters = tuple(map(int, content[1][1:-1].split(', '))) 
+
+    mov_clusters = content[2:2+count_clusters[0]]
+    pos_clusters = content[2+count_clusters[0]:2+count_clusters[0]+count_clusters[1]]
+    ori_clusters = content[2+count_clusters[0]+count_clusters[1]:2+count_clusters[0]+count_clusters[1]+count_clusters[2]]
+
+    return mov_clusters, pos_clusters, ori_clusters

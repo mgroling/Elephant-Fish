@@ -4,6 +4,8 @@
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import seaborn
+from functions import *
+from sklearn.cluster import KMeans
 import pandas as pd
 import numpy as np
 
@@ -130,6 +132,7 @@ def plot_locomotion(paths, path_to_save, round):
     round will round to one decimal place (round = 2 -> all values will be of the form x.yz)
     Creates Bar Plots for the Dataframes, one for linear_movement and for angle_radians
     """
+    #right now it thinks that 0 and 2*pi are not the same for pos and ori, maybe find a solution for it
     df_list = []
     for path in paths:
         df_list.append(pd.read_csv(path, sep = ";"))
@@ -137,14 +140,15 @@ def plot_locomotion(paths, path_to_save, round):
     #round values
     df_all = df_all.round(round)
 
-    #get all linear_movement columns respectivly all angle_radians columns
+    #get all linear_movement columns respectivly all angle columns
     mov_cols = [col for col in df_all.columns if "linear_movement" in col]
-    ang_cols = [col for col in df_all.columns if "angle_radians" in col]
+    ang_pos_cols = [col for col in df_all.columns if "angle_new_pos" in col]
+    ang_ori_cols = [col for col in df_all.columns if "angle_change_orientation" in col]
 
     #melt linear_movement columns together in one
-    df_mov = df_all[mov_cols].melt(var_name = "columns", value_name = "value")
+    df_temp = df_all[mov_cols].melt(var_name = "columns", value_name = "value")
     #count the values and plot it
-    ax = df_mov["value"].value_counts().sort_index().plot.bar()
+    ax = df_temp["value"].value_counts().sort_index().plot.bar()
     for i, t in enumerate(ax.get_xticklabels()):
         if (i % 2) != 0:
             t.set_visible(False)
@@ -152,12 +156,55 @@ def plot_locomotion(paths, path_to_save, round):
     fig.set_size_inches(25, 12.5)
     fig.savefig(path_to_save + "plot_linear_movement.png")
 
-    df_ang = df_all[ang_cols].melt(var_name = "columns", value_name = "value")
-    ax = df_ang["value"].value_counts().sort_index().plot.bar()
+    df_temp = df_all[ang_pos_cols].melt(var_name = "columns", value_name = "value")
+    ax = df_temp["value"].value_counts().sort_index().plot.bar()
+    for i, t in enumerate(ax.get_xticklabels()):
+        if (i % 2) != 0:
+            t.set_visible(True)
     fig = ax.get_figure()
     fig.set_size_inches(25, 12.5)
-    fig.savefig(path_to_save + "plot_angle_radians.png")
+    fig.savefig(path_to_save + "plot_angle_new_pos.png")
 
+    df_temp = df_all[ang_ori_cols].melt(var_name = "columns", value_name = "value")
+    ax = df_temp["value"].value_counts().sort_index().plot.bar()
+    fig = ax.get_figure()
+    fig.set_size_inches(25, 12.5)
+    fig.savefig(path_to_save + "plot_angle_change_orientation.png")
+
+def getClusters(paths, path_to_save, count_clusters = (20, 20, 20)):
+    """
+    paths should be iterable
+    path_to_save is the folder in which it will be saved
+    round will round to one decimal place (round = 2 -> all values will be of the form x.yz)
+    Finds cluster centers for the dataframes (for mov, pos, ori) (count_clusters should be a tuple with (count_clusters_mov, count_clusters_pos, count_clusters_ori)) and saves these clusters
+    """
+    #right now it thinks that 0 and 2*pi are not the same for pos and ori, maybe find a solution for it
+    df_list = []
+    for path in paths:
+        df_list.append(pd.read_csv(path, sep = ";"))
+    df_all = pd.concat(df_list)
+
+    #get all linear_movement columns respectivly all angle columns
+    mov_cols = [col for col in df_all.columns if "linear_movement" in col]
+    ang_pos_cols = [col for col in df_all.columns if "angle_new_pos" in col]
+    ang_ori_cols = [col for col in df_all.columns if "angle_change_orientation" in col]
+
+    df_mov = df_all[mov_cols].melt(var_name = "columns", value_name = "value")
+    df_pos = df_all[ang_pos_cols].melt(var_name = "columns", value_name = "value")
+    df_ori = df_all[ang_ori_cols].melt(var_name = "columns", value_name = "value")
+
+    kmeans_mov = KMeans(n_clusters = count_clusters[0]).fit(df_mov["value"].to_numpy().reshape(-1, 1))
+    kmeans_pos = KMeans(n_clusters = count_clusters[1]).fit(df_pos["value"].to_numpy().reshape(-1, 1))
+    kmeans_ori = KMeans(n_clusters = count_clusters[2]).fit(df_ori["value"].to_numpy().reshape(-1, 1))
+
+    with open(path_to_save + "clusters.txt", "w+") as f:
+        f.write("count_clusters(mov, pos, ori)\n" + str(count_clusters) + "\n")
+        for elem in kmeans_mov.cluster_centers_:
+            f.write(str(float(elem)) +"\n")
+        for elem in kmeans_pos.cluster_centers_:
+            f.write(str(float(elem)) +"\n")
+        for elem in kmeans_ori.cluster_centers_:
+            f.write(str(float(elem)) +"\n")
 
 def save_figure(fig, path = "figures/latest_plot.png", size = (25, 12.5)):
     """
@@ -214,7 +261,14 @@ def main():
     fig = plot_follow_iid(tracks)
     save_figure(fig, "figures/follow_iid.png")
     # plot_positions(tracks, tracks2)
+    # file = "data/sleap_1_Diffgroup1-1.h5"
+    # fish1 = reader.extract_coordinates(file, [b'center'], [0])
+    # fish2 = reader.extract_coordinates(file, [b'center'], [1])
+    # tracks = reader.extract_coordinates(file, [b'center'], [0,1,2])
 
+    # plot_follow(tracks)
+
+    getClusters(["data/locomotion_data.csv"], "data/", (15, 20, 17))
 
 if __name__ == "__main__":
     main()
