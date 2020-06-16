@@ -212,7 +212,6 @@ def plot_positions(track, track2 = None):
 
 
 def main():
-<<<<<<< HEAD
     file = "data/sleap_1_Diffgroup1-1.h5"
     # fish1 = reader.extract_coordinates(file, [b'center'], [0])
     # fish2 = reader.extract_coordinates(file, [b'center'], [1])
@@ -222,16 +221,14 @@ def main():
     fig = plot_follow(tracks)
     save_figure(fig)
     # plot_positions(tracks, tracks2)
-=======
     # file = "data/sleap_1_Diffgroup1-1.h5"
     # fish1 = reader.extract_coordinates(file, [b'center'], [0])
     # fish2 = reader.extract_coordinates(file, [b'center'], [1])
     # tracks = reader.extract_coordinates(file, [b'center'], [0,1,2])
 
     # plot_follow(tracks)
->>>>>>> master
 
-    getClusters(["data/locomotion_data.csv"], "data/", (15, 20, 17))
+    # getClusters(["data/locomotion_data.csv"], "data/", (15, 20, 17))
 
 if __name__ == "__main__":
     main()

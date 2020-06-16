@@ -104,13 +104,10 @@ def softmax(np_array):
     return np.divide(temp, np.sum(temp, axis = 1).reshape(-1, 1))
 
 def main():
-<<<<<<< HEAD
-    file = "data/sleap_1_diff1.h5"
-=======
+    # file = "data/sleap_1_diff1.h5"
     # file = "data/sleap_1_Diffgroup1-1.h5"
 
     # temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])
->>>>>>> master
 
     # #remove rows with Nans in it
     # temp = temp[~np.isnan(temp).any(axis=1)]
@@ -120,7 +117,7 @@ def main():
     # #get locomotion and save it
     # getLocomotion(temp , "data/locomotion_data.csv")
 
-    convertLocmotionToBin("data/locomotion_data.csv", "data/locomotion_data_bin.csv", "data/clusters.txt")
+    # convertLocmotionToBin("data/locomotion_data.csv", "data/locomotion_data_bin.csv", "data/clusters.txt")
 
 if __name__ == "__main__":
     main()
