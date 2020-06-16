@@ -3,6 +3,7 @@
 
 import reader
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 from functions import *
 from sklearn.cluster import KMeans
 import pandas as pd
@@ -49,7 +50,7 @@ def calc_follow(a, b):
     return (a_v * b_p).sum(axis=-1)
 
 
-def plot_follow(tracks, file = "data/follow.png", max_tolerated_movement=20):
+def plot_follow(tracks, file = "figures/follow.png", max_tolerated_movement=20):
     """
     Create and save Follow graph, only use center nodes for it
     count_bins is the number bins
@@ -76,10 +77,13 @@ def plot_follow(tracks, file = "data/follow.png", max_tolerated_movement=20):
     valsToPlot = np.histogram(follow, bins=bins)[0]
     # Set up plot
     y_pos = np.arange(len(valsToPlot))
-    print(y_pos)
+
     plt.bar(y_pos, valsToPlot)
     plt.xticks(y_pos, labels)
-    plt.show()
+
+    plt.plot()
+    return plt.gcf()
+
 
 
 def plot_locomotion(paths, path_to_save, round):
@@ -163,13 +167,69 @@ def getClusters(paths, path_to_save, count_clusters = (20, 20, 20)):
         for elem in kmeans_ori.cluster_centers_:
             f.write(str(float(elem)) +"\n")
 
+def save_figure(fig, path = "figures/latest_plot.png", size = (25, 12.5)):
+    """
+    Saves the given figure in path with certain size
+    """
+    x, y = size
+    fig.set_size_inches(x, y)
+    fig.savefig(path)
+    plt.close(fig)
+
+
+def plot_positions(track, track2 = None):
+
+    frames, positions = track.shape
+
+    assert positions % 2 == 0
+
+    i_x = list(range(0,positions,2))
+    i_y = list(range(1,positions,2))
+
+    fig = plt.figure()
+
+    def update_points(n, track, points):
+        points.set_xdata(track[n,i_x])
+        points.set_ydata(track[n,i_y])
+
+    def update_points2(n, track, track2, points, points2):
+        points.set_xdata(track[n,i_x])
+        points.set_ydata(track[n,i_y])
+        points2.set_xdata(track2[n,i_x])
+        points2.set_ydata(track2[n,i_y])
+
+    plt.xlim(0, 960)
+    plt.ylim(9,720)
+
+    points, = plt.plot([], [], 'r.')
+    if track2 is None:
+        point_animation = animation.FuncAnimation(fig, update_points, track.shape[0],fargs=(track, points), interval=10)
+    else:
+        points2, = plt.plot([], [], 'b.')
+        point_animation = animation.FuncAnimation(fig, update_points2, track.shape[0],fargs=(track, track2, points, points2), interval=10)
+
+    plt.show()
+
+
 def main():
+<<<<<<< HEAD
+    file = "data/sleap_1_Diffgroup1-1.h5"
+    # fish1 = reader.extract_coordinates(file, [b'center'], [0])
+    # fish2 = reader.extract_coordinates(file, [b'center'], [1])
+    tracks = reader.extract_coordinates(file, [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'], [0,1,2])
+    tracks2 = reader.extract_coordinates(file, [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'], [0,1,2], interpolate_nans=False, interpolate_outlier=False)
+
+    fig = plot_follow(tracks)
+    save_figure(fig)
+    # plot_positions(tracks, tracks2)
+=======
     # file = "data/sleap_1_Diffgroup1-1.h5"
     # fish1 = reader.extract_coordinates(file, [b'center'], [0])
     # fish2 = reader.extract_coordinates(file, [b'center'], [1])
     # tracks = reader.extract_coordinates(file, [b'center'], [0,1,2])
 
     # plot_follow(tracks)
+>>>>>>> master
 
     getClusters(["data/locomotion_data.csv"], "data/", (15, 20, 17))
 
