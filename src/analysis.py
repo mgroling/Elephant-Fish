@@ -4,10 +4,10 @@
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import seaborn
-from functions import *
 from sklearn.cluster import KMeans
 import pandas as pd
 import numpy as np
+import os
 
 import reader
 from functions import *
@@ -320,6 +320,29 @@ def plot_tlvc_iid(tracks, time_step = (1000/30), *, tau_seconds=(0.3, 1.3)):
     grid.fig.set_figheight(6)
     grid.fig.subplots_adjust(top=0.9)
     return grid.fig
+
+def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), *, tau_seconds=(0.3, 1.3) ):
+    """
+    For given tracks create all plots in given path
+    tracks only is allowed to include one node per fish!
+    """
+    # handle dir
+    if not os.path.isdir(path):
+        # create dir
+        try:
+            os.mkdir(path)
+        except OSError:
+            print("Dir Creation failed")
+    if path[-1] != "/":
+        path = path + "/"
+
+    # make and save graphs
+    # missing: iid, locomotions, trajectories
+    save_figure(plot_follow(tracks), path=(path + "follow.png"))
+    save_figure(plot_follow_iid(tracks), path=(path + "follow_iid.png"))
+    save_figure(plot_tlvc_iid(tracks, time_step, tau_seconds), path=(path + "tlvc_iid.png"))
+    save_figure(plot_tankpositions(tracks), path=(path + "tankpostions.png"))
+    # save_figure(plot_locomotion(tracks), path=(path + "locomotion"))
 
 
 def main():
