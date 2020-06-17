@@ -253,6 +253,33 @@ def plot_positions(track, track2 = None):
     plt.show()
 
 
+def plot_tankpositions(tracks):
+    """
+    Heatmap of fishpositions
+    By Moritz Maxeiner
+    """
+
+    assert tracks.shape[-1] % 2 == 0
+    nfish = int(tracks.shape[-1] / 2)
+
+    x_pos = []
+    y_pos = []
+    for i1 in range(nfish):
+        f1_x, f1_y = get_indices(i1)
+        x_pos.append( tracks[:, f1_x] )
+        y_pos.append( tracks[:, f1_y] )
+
+    x_pos = np.concatenate(x_pos, axis=0)
+    y_pos = np.concatenate(y_pos, axis=0)
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+    fig.subplots_adjust(top=0.91)
+    ax.set_xlim(0, 960)
+    ax.set_ylim(0, 720)
+    seaborn.kdeplot(x_pos, y_pos, n_levels=25, shade=True, ax=ax)
+    return fig
+
+
 def plot_tlvc_iid(tracks, time_step = (1000/30), *, tau_seconds=(0.3, 1.3)):
     """
     TLVC_IDD by Moritz Maxeiner
@@ -299,8 +326,8 @@ def main():
     file = "data/sleap_1_diff1.h5"
     tracks = reader.extract_coordinates(file, [b'center'])
 
-    fig = plot_tlvc_iid(tracks)
-    save_figure(fig, "figures/tlvc_iid.png")
+    fig = plot_tankpositions(tracks)
+    save_figure(fig, "figures/tankpositions.png" , size=(24, 18))
 
 if __name__ == "__main__":
     main()
