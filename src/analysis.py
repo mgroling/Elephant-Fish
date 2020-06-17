@@ -262,8 +262,6 @@ def plot_tlvc_iid(tracks, time_step = (1000/30), *, tau_seconds=(0.3, 1.3)):
     tau_min_frames = int(tau_min_seconds * 1000.0 / time_step)
     tau_max_frames = int(tau_max_seconds * 1000.0 / time_step)
 
-    print(tau_min_frames, " ", tau_max_frames)
-
     # for every fish combination calculate the follow
     for i1 in range(nfish):
         for i2 in range(i1 + 1, nfish):
