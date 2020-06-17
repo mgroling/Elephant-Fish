@@ -250,25 +250,53 @@ def plot_positions(track, track2 = None):
     plt.show()
 
 
+def plot_tlvc_iid(tracks, time_step = (1000/30), *, tau_seconds=(0.3, 1.3)):
+    tau_min_seconds, tau_max_seconds = tau_seconds
+
+    assert tracks.shape[-1] % 2 == 0
+    nfish = int(tracks.shape[-1] / 2)
+
+    tlvc = []
+    iid = []
+
+    tau_min_frames = int(tau_min_seconds * 1000.0 / time_step)
+    tau_max_frames = int(tau_max_seconds * 1000.0 / time_step)
+
+    print(tau_min_frames, " ", tau_max_frames)
+
+    # for every fish combination calculate the follow
+    for i1 in range(nfish):
+        for i2 in range(i1 + 1, nfish):
+            f1_x, f1_y = get_indices(i1)
+            f2_x, f2_y = get_indices(i2)
+            iid.append(calc_iid(tracks[1 : -tau_max_frames + 1, f1_x:f1_y + 1], tracks[1 : -tau_max_frames + 1, f2_x:f2_y + 1]))
+            iid.append(iid[-1])
+
+            a_v = tracks[1:, f1_x:f1_y + 1] - tracks[:-1, f1_x:f1_y + 1]
+            b_v = tracks[1:, f2_x:f2_y + 1] - tracks[:-1, f2_x:f2_y + 1]
+            tlvc.append(calc_tlvc(a_v, b_v, tau_min_frames, tau_max_frames))
+            tlvc.append(calc_tlvc(b_v, a_v, tau_min_frames, tau_max_frames))
+
+    tlvc_iid_data = pd.DataFrame(
+        {"IID [cm]": np.concatenate(iid, axis=0), "TLVC": np.concatenate(tlvc, axis=0)}
+    )
+
+    grid = seaborn.jointplot(
+        x="IID [cm]", y="TLVC", data=tlvc_iid_data, linewidth=0, s=1, kind="scatter"
+    )
+    grid.ax_joint.set_xlim(0, 142)
+    grid.fig.set_figwidth(9)
+    grid.fig.set_figheight(6)
+    grid.fig.subplots_adjust(top=0.9)
+    return grid.fig
+
+
 def main():
-    file = "data/sleap_1_Diffgroup1-1.h5"
-    # fish1 = reader.extract_coordinates(file, [b'center'], [0])
-    # fish2 = reader.extract_coordinates(file, [b'center'], [1])
-    # tracks = reader.extract_coordinates(file, [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'], [0,1,2])
-    # tracks2 = reader.extract_coordinates(file, [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'], [0,1,2], interpolate_nans=False, interpolate_outlier=False)
+    file = "data/sleap_1_diff1.h5"
     tracks = reader.extract_coordinates(file, [b'center'])
 
-    fig = plot_follow_iid(tracks)
-    save_figure(fig, "figures/follow_iid.png")
-    # plot_positions(tracks, tracks2)
-    # file = "data/sleap_1_Diffgroup1-1.h5"
-    # fish1 = reader.extract_coordinates(file, [b'center'], [0])
-    # fish2 = reader.extract_coordinates(file, [b'center'], [1])
-    # tracks = reader.extract_coordinates(file, [b'center'], [0,1,2])
-
-    # plot_follow(tracks)
-
-    getClusters(["data/locomotion_data.csv"], "data/", (15, 20, 17))
+    fig = plot_tlvc_iid(tracks)
+    save_figure(fig, "figures/tlvc_iid.png")
 
 if __name__ == "__main__":
     main()
