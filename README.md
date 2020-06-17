@@ -4,6 +4,21 @@
 
 # Areas of improvement for Fishdata retrieval
 
+# Dependencies
+
+These dependencies will be needed for this project to work:
+* Python 3.6.10
+* sklearn
+* numpy
+* python
+* imageio
+* seaborn
+* matplotlib
+* scipy
+* h5py
+* sys
+* math
+* itertools
 
 # Given Videos
 
@@ -11,6 +26,7 @@
 
 We mapped following names to the given videos:
 
+```
 diff_1 - DiffGroup1-1
 diff_2 - DiffGroup5_2-cut
 diff_3 - DiffGroup9_1-1
@@ -21,6 +37,7 @@ same_2 - SameGroup5_3-1
 same_3 - SameGroup9_2-1
 same_4 - SameGroup31_1-1
 same_5 - SameGroup31_2-1
+```
 
 ## Frames used
 
