@@ -217,6 +217,9 @@ def save_figure(fig, path = "figures/latest_plot.png", size = (25, 12.5)):
 
 
 def plot_positions(track, track2 = None):
+    """
+    Animation of all postions. Not optimized.
+    """
 
     frames, positions = track.shape
 
@@ -251,6 +254,9 @@ def plot_positions(track, track2 = None):
 
 
 def plot_tlvc_iid(tracks, time_step = (1000/30), *, tau_seconds=(0.3, 1.3)):
+    """
+    TLVC_IDD by Moritz Maxeiner
+    """
     tau_min_seconds, tau_max_seconds = tau_seconds
 
     assert tracks.shape[-1] % 2 == 0
