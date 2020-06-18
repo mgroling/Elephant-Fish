@@ -31,14 +31,14 @@ class Raycast:
 
     def getRays(self, np_array, path_to_save_to = None):
         """
-        This function expects to be given a numpy array of the shape (rows, count_fishes*4) and saves a csv file at a given path (path has to end on .csv).
+        This function expects to be given a numpy array of the shape (rows, count_fishes*4) and saves a csv file at path_to_save_to (path has to end on .csv) if path_to_save_to != None.
         The information about each given fish (or object in general) should be first_position_x, first_position_y, second_position_x, second_position_y.
         It is assumed that the fish is looking into the direction of first_positon_x - second_position_x for x and first_positon_y - second_position_y for y.
         """
         self._getFish(np_array)
         output_np_array = np.array([np.append(self._bins_header, self._wall_rays_header)])
         for i in range(0, len(np_array)):
-            if i%1000 == 0:
+            if i!=0 and i%1000 == 0:
                 print("||| Frame " + str(i) + " finished. |||")
             new_row = [[] for k in range(0, len(self._bins_header))]
             distance_row = []
