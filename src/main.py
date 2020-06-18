@@ -1,4 +1,5 @@
 from functions import *
+from locomotion import *
 from raycasts import *
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, BatchNormalization
@@ -7,18 +8,22 @@ import tensorflow as tf
 import pandas as pd
 import numpy as np
 import os
+import random
 
 # Use python 3.6.10
 
 class Simulation:
-    def __init__(self, count_bins_agents, count_rays_walls, radius_fov_walls, radius_fov_agents, max_view_range, count_fishes, clusters_counts):
+    def __init__(self, count_bins_agents, count_rays_walls, radius_fov_walls, radius_fov_agents, max_view_range, count_fishes, cluster_path):
         self._count_bins = count_bins_agents
         self._count_rays = count_rays_walls
         self._fov_walls = radius_fov_walls
         self._fov_agents = radius_fov_agents
         self._view = max_view_range
         self._count_agents = count_fishes
-        self._clusters_counts = clusters_counts
+        self._clusters_path = cluster_path
+        self._clusters_mov, self._clusters_pos, self._clusters_ori = readClusters(cluster_path)
+        self._clusters_counts = len(self._clusters_mov), len(self._clusters_pos), len(self._clusters_ori)
+        self._wall_lines = defineLines(getRedPoints(path = "data/final_redpoint_wall.jpg"))
 
     def setModel(self, model):
         self._model = model
@@ -26,14 +31,14 @@ class Simulation:
     def trainNetwork(self, locomotion_path, raycasts_path, subtrack_length, batch_size, epochs):
         X = []
         y = []
-        for i in range(0, self._count_agents):
-            #get last locomotion for input and next for output
-            df = pd.read_csv(locomotion_path, sep = ";")
-            loc_size = sum(list(self._clusters_counts))
-            locomotion = df.to_numpy()
+        #get last locomotion for input and next for output
+        df = pd.read_csv(locomotion_path, sep = ";")
+        loc_size = sum(list(self._clusters_counts))
+        locomotion = df.to_numpy()
 
-            df = pd.read_csv(raycasts_path, sep = ";")
-            raycasts = df.to_numpy()
+        df = pd.read_csv(raycasts_path, sep = ";")
+        raycasts = df.to_numpy()
+        for i in range(0, self._count_agents):
             for subtrack in range(0, int(len(locomotion)/subtrack_length)+1):
                 #get locomotion
                 X.append(locomotion[subtrack*subtrack_length : min((subtrack+1)*subtrack_length-1, len(locomotion)-2), i*loc_size : (i+1)*loc_size])
@@ -47,28 +52,72 @@ class Simulation:
 
         self._last_train_X = []
         for i in range(0, self._count_agents):
-            self._last_train_X.append(X[i][0].reshape(1, 1, X[i].shape[-1]))
+            self._last_train_X.append(X[i][0, :, :].reshape(1, 1, X[i].shape[-1]))
 
         for i in range(0, len(X)):
             print("Training on Subtrack " + str(i))
             self._model.fit(X[i], y[i], epochs=epochs, batch_size=batch_size, verbose=2)
 
-    def testNetwork(self, timesteps = 10, save_tracks = None, start = "last_train"):
+    def testNetwork(self, timesteps = 10, save_tracks = None, start = "random"):
         cur_X = None
-        cur_y = None
+        cur_pos = []
+        locomotion = [[] for i in range(0, self._count_agents)]
+        raycast_object = Raycast(self._wall_lines, self._count_bins, self._count_rays, self._fov_agents, self._fov_walls, self._view, self._count_agents)
         if start == "random":
-            #TODO
-            pass
+            for i in range(0, self._count_agents):
+                #(250 700) for x (125, 550) for y are good boundaries for coordiantes within the tank
+                x_head, y_head, length, angle_rad = random.uniform(250, 700), random.uniform(125, 550), random.uniform(10,30), math.radians(random.uniform(0, 359))
+                #cur_pos right now is x_head, y_head, x_center, y_center, angle from look_vector to pos_x_axis
+                cur_pos.append([x_head, y_head, length, angle_rad])
+                #maybe make it actually random... TODO (first X)
+                cur_X = self._last_train_X
         elif start == "last_train":
+            # cur_pos = 
             cur_X = self._last_train_X
     
         for i in range(0, timesteps):
             for j in range(0, self._count_agents):
-                print(softmax(self._model.predict(cur_X[j])))
-                #TODO
+                pred = self._model.predict(cur_X[j])
+                #collect prediction for each bin and create percentages out of them
+                pred_mov_bins = softmax(pred[:, : self._clusters_counts[0]])
+                pred_pos_bins = softmax(pred[:, self._clusters_counts[0] : self._clusters_counts[0]+self._clusters_counts[1]])
+                pred_ori_bins = softmax(pred[:, self._clusters_counts[0]+self._clusters_counts[1] :])
 
+                #select one randomly (with its given percentage)
+                pred_mov_bins_index = selectPercentage(pred_mov_bins[0])
+                pred_pos_bins_index = selectPercentage(pred_pos_bins[0])
+                pred_ori_bins_index = selectPercentage(pred_ori_bins[0])
 
+                #translate index of bin into actual locomotion values
+                pred_mov = self._clusters_mov[pred_mov_bins_index]
+                pred_pos = self._clusters_pos[pred_pos_bins_index]
+                pred_ori = self._clusters_ori[pred_ori_bins_index]
 
+                #chage movement to be always positive (in locomotion)
+                angle_pos = (cur_pos[j][3] + pred_pos) - 2*math.pi if (cur_pos[j][3] + pred_pos) > 2*math.pi else (cur_pos[j][3] + pred_pos)
+                movement_vector = (abs(pred_mov)*math.cos(angle_pos), abs(pred_mov)*math.sin(angle_pos))
+
+                angle_ori = (cur_pos[j][3] + pred_ori) - 2*math.pi if (cur_pos[j][3] + pred_ori) > 2*math.pi else (cur_pos[j][3] + pred_ori)
+
+                #add cur_pos vector to movement_vector
+                cur_pos[j][0] += movement_vector[0]
+                cur_pos[j][1] += movement_vector[1]
+                cur_pos[j][3] = angle_ori
+
+                #save old locomotion for next iterations network input
+                locomotion[j] = np.append(np.append(pred_mov_bins, pred_pos_bins, axis = 1), pred_ori_bins, axis = 1)
+            
+            input_raycasts = [None for j in range(0, self._count_agents)]
+            for j in range(0, self._count_agents):
+                input_raycasts[j] = [cur_pos[j][0] + cur_pos[j][2]*math.cos(cur_pos[j][3]), cur_pos[j][1] + cur_pos[j][2]*math.sin(cur_pos[j][3]), cur_pos[j][0], cur_pos[j][1]]
+            input_raycasts = np.array(input_raycasts).reshape(1, self._count_agents*4)
+
+            raycasts = raycast_object.getRays(input_raycasts)
+            for j in range(0, self._count_agents):
+                cur_X[j] = np.append(np.append(locomotion[j], raycasts[:, j*self._count_rays : (j+1)*self._count_rays], axis = 1), raycasts[:, self._count_agents*self._count_rays+j*self._count_bins : self._count_agents*self._count_rays+(j+1)*self._count_bins])
+                cur_X[j] = cur_X[j].reshape(1, 1, cur_X[j].shape[-1])
+
+            #save locomotions in file TODO
 
 def main():
     #Set Variables
@@ -86,10 +135,10 @@ def main():
     model.add(Dense(sum(list(CLUSTER_COUNTS))))
     model.compile(loss='mean_squared_error', optimizer='adam')
 
-    sim = Simulation(COUNT_BINS_AGENTS, COUNT_RAYS_WALLS, RADIUS_FIELD_OF_VIEW_WALLS, RADIUS_FIELD_OF_VIEW_AGENTS, MAX_VIEW_RANGE, COUNT_FISHES, CLUSTER_COUNTS)
+    sim = Simulation(COUNT_BINS_AGENTS, COUNT_RAYS_WALLS, RADIUS_FIELD_OF_VIEW_WALLS, RADIUS_FIELD_OF_VIEW_AGENTS, MAX_VIEW_RANGE, COUNT_FISHES, "data/clusters.txt")
     sim.setModel(model)
     sim.trainNetwork("data/locomotion_data_bin.csv", "data/raycast_data.csv", 6000, 10, 1)
-    sim.testNetwork()
+    sim.testNetwork(timesteps = 10)
     # #Set Variables
     # COUNT_BINS_AGENTS = 21
     # COUNT_RAYS_WALLS = 15
