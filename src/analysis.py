@@ -11,6 +11,7 @@ import os
 
 import reader
 from functions import *
+import locomotion
 
 def normalize_series(x):
     """
@@ -56,6 +57,9 @@ def plot_follow(tracks, max_tolerated_movement=20):
     """
     Create and save Follow graph, only use center nodes for it
     count_bins is the number bins
+    Expects one node per fish at max: tracks: [fish1_x, fish1_y, fish2_x, fish2_y,..]
+                                              [fish1_x, fish1_y, fish2_x, fish2_y,..]
+                                              ...
     """
     assert tracks.shape[-1] % 2 == 0
     nfish = int(tracks.shape[-1] / 2)
@@ -91,6 +95,9 @@ def plot_follow(tracks, max_tolerated_movement=20):
 def plot_follow_iid(tracks):
     """
     plots fancy graph with follow and iid, only use with center values
+    Expects one node per fish at max: tracks: [fish1_x, fish1_y, fish2_x, fish2_y,..]
+                                              [fish1_x, fish1_y, fish2_x, fish2_y,..]
+                                              ...
     copied from Moritz Maxeiner
     """
 
@@ -206,15 +213,6 @@ def getClusters(paths, path_to_save, count_clusters = (20, 20, 20)):
         for elem in kmeans_ori.cluster_centers_:
             f.write(str(float(elem)) +"\n")
 
-def save_figure(fig, path = "figures/latest_plot.png", size = (25, 12.5)):
-    """
-    Saves the given figure in path with certain size
-    """
-    x, y = size
-    fig.set_size_inches(x, y)
-    fig.savefig(path)
-    plt.close(fig)
-
 
 def plot_positions(track, track2 = None):
     """
@@ -283,6 +281,9 @@ def plot_tankpositions(tracks):
 def plot_tlvc_iid(tracks, time_step = (1000/30), *, tau_seconds=(0.3, 1.3)):
     """
     TLVC_IDD by Moritz Maxeiner
+    Expects one node per fish at max: tracks: [fish1_x, fish1_y, fish2_x, fish2_y,..]
+                                              [fish1_x, fish1_y, fish2_x, fish2_y,..]
+                                              ...
     """
     tau_min_seconds, tau_max_seconds = tau_seconds
 
@@ -321,10 +322,14 @@ def plot_tlvc_iid(tracks, time_step = (1000/30), *, tau_seconds=(0.3, 1.3)):
     grid.fig.subplots_adjust(top=0.9)
     return grid.fig
 
+
 def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), *, tau_seconds=(0.3, 1.3) ):
     """
     For given tracks create all plots in given path
     tracks only is allowed to include one node per fish!
+    Expects one node per fish at max: tracks: [fish1_x, fish1_y, fish2_x, fish2_y,..]
+                                              [fish1_x, fish1_y, fish2_x, fish2_y,..]
+                                              ...
     """
     # handle dir
     if not os.path.isdir(path):
@@ -343,6 +348,16 @@ def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), *
     save_figure(plot_tlvc_iid(tracks, time_step, tau_seconds), path=(path + "tlvc_iid.png"))
     save_figure(plot_tankpositions(tracks), path=(path + "tankpostions.png"))
     # save_figure(plot_locomotion(tracks), path=(path + "locomotion"))
+
+
+def save_figure(fig, path = "figures/latest_plot.png", size = (25, 12.5)):
+    """
+    Saves the given figure in path with certain size
+    """
+    x, y = size
+    fig.set_size_inches(x, y)
+    fig.savefig(path)
+    plt.close(fig)
 
 
 def main():
