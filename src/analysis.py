@@ -323,6 +323,58 @@ def plot_tlvc_iid(tracks, time_step = (1000/30), *, tau_seconds=(0.3, 1.3)):
     return grid.fig
 
 
+def plot_velocities(tracks):
+    """
+    Plots the velocities
+    Expects two nodes per fish exactly: tracks: [head1_x, head1_y, center1_x, center1_y, head2_x, head2_y, center2_x, center2_y,...]
+                                                [head1_x, head1_y, center1_x, center1_y, head2_x, head2_y, center2_x, center2_y,...]
+                                                ...
+    """
+
+    assert tracks.shape[-1] % 4 == 0
+    nfish = int(tracks.shape[-1] / 4)
+    dis = get_distances(tracks)
+    print("avg:", np.mean(dis, axis=0))
+    print("max:", np.amax(dis, axis=0))
+    print("min:", np.amin(dis, axis=0))
+
+    locs = locomotion.getLocomotion(tracks, None, False)
+
+    print("Before:")
+    print("avg:", np.mean(locs, axis=0))
+    print("max:", np.amax(locs, axis=0))
+    print("min:", np.amin(locs, axis=0))
+
+    # Get dem indices
+    i_lin = [x * 3 for x in range(nfish)]
+    i_ang = [x * 3 + 1 for x in range(nfish)]
+    i_trn = [x * 3 + 2 for x in range(nfish)]
+    linear_velocities = locs[:,i_lin]
+    angular_velocities = locs[:,i_ang]
+    turn_velocities = locs[:,i_trn]
+
+    angular_velocities = np.concatenate(angular_velocities, axis=0)
+    linear_velocities = np.concatenate(linear_velocities, axis=0)
+    turn_velocities = np.concatenate(turn_velocities, axis=0)
+
+    fig_angular, ax = plt.subplots(figsize=(18, 18))
+    fig_angular.subplots_adjust(top=0.93)
+    ax.set_xlim(0, np.pi * 2)
+    seaborn.distplot(pd.Series(angular_velocities, name="Angular velocities"), ax=ax)
+
+    fig_turn, ax = plt.subplots(figsize=(18, 18))
+    fig_turn.subplots_adjust(top=0.93)
+    ax.set_xlim(0, np.pi * 2)
+    seaborn.distplot(pd.Series(turn_velocities, name="Turning velocities"), ax=ax)
+
+    fig_linear, ax = plt.subplots(figsize=(18, 18))
+    fig_linear.subplots_adjust(top=0.93)
+    ax.set_xlim(-20, 20)
+    seaborn.distplot(pd.Series(linear_velocities, name="Linear velocities"), ax=ax)
+
+    return fig_linear, fig_angular, fig_turn
+
+
 def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), *, tau_seconds=(0.3, 1.3) ):
     """
     For given tracks create all plots in given path
@@ -362,10 +414,12 @@ def save_figure(fig, path = "figures/latest_plot.png", size = (25, 12.5)):
 
 def main():
     file = "data/sleap_1_diff1.h5"
-    tracks = reader.extract_coordinates(file, [b'center'])
+    tracks = reader.extract_coordinates(file, [b'head',b'center'])
 
-    fig = plot_tankpositions(tracks)
-    save_figure(fig, "figures/tankpositions.png" , size=(24, 18))
+    lin,ang,trn = plot_velocities(tracks)
+    save_figure(lin, "figures/velocities_linear.png" , size=(18, 18))
+    save_figure(ang, "figures/velocities_angular.png" , size=(18, 18))
+    save_figure(trn, "figures/velocities_trn.png" , size=(18, 18))
 
 if __name__ == "__main__":
     main()
