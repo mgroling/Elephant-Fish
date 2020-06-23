@@ -74,21 +74,12 @@ def plot_follow(tracks, max_tolerated_movement=20):
 
     follow = np.concatenate(follow, axis=0)
 
-    # Create bins for bars
-    bins_pos = [x + 0.5 for x in range(0, max_tolerated_movement)] + [max_tolerated_movement]
-    bins_neg = [x * -1 for x in reversed(bins_pos)]
-    bins = bins_neg + bins_pos
-    # Create labels
-    labels = list(range(-max_tolerated_movement, max_tolerated_movement + 1))
-    valsToPlot = np.histogram(follow, bins=bins)[0]
-    # Set up plot
-    y_pos = np.arange(len(valsToPlot))
+    fig, ax = plt.subplots()
+    fig.subplots_adjust(top=0.93)
+    ax.set_xlim(-max_tolerated_movement, max_tolerated_movement)
+    seaborn.distplot(pd.Series(follow, name="Follow"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
 
-    plt.bar(y_pos, valsToPlot)
-    plt.xticks(y_pos, labels)
-
-    plt.plot()
-    return plt.gcf()
+    return fig
 
 
 def plot_iid(tracks):
@@ -116,7 +107,7 @@ def plot_iid(tracks):
     fig, ax = plt.subplots()
     fig.subplots_adjust(top=0.93)
     ax.set_xlim(0, 700)
-    seaborn.distplot(pd.Series(iid, name="IID [pixel]"), ax=ax)
+    seaborn.distplot(pd.Series(iid, name="IID [pixel]"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
 
     return fig
 
@@ -483,8 +474,6 @@ def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), t
 
     # todos:
     # Check all x and y values and adjust
-    # Rework plot_follow
-    # compute max_distance and adjust graphs
     # reorder (maybe new evaluation.py file?)
     # Extract Center nodes
     i_center_values = [x for x in range(nfish * 4) if x % 4 < 2]
