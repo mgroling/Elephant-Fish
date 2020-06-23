@@ -47,53 +47,6 @@ def calc_follow(a, b):
     return (a_v * b_p).sum(axis=-1)
 
 
-def plot_locomotion(paths, path_to_save, round):
-    """
-    paths should be iterable
-    path_to_save is the folder in which it will be saved
-    round will round to one decimal place (round = 2 -> all values will be of the form x.yz)
-    Creates Bar Plots for the Dataframes, one for linear_movement and for angle_radians
-    """
-    #right now it thinks that 0 and 2*pi are not the same for pos and ori, maybe find a solution for it
-    df_list = []
-    for path in paths:
-        df_list.append(pd.read_csv(path, sep = ";"))
-    df_all = pd.concat(df_list)
-    #round values
-    df_all = df_all.round(round)
-
-    #get all linear_movement columns respectivly all angle columns
-    mov_cols = [col for col in df_all.columns if "linear_movement" in col]
-    ang_pos_cols = [col for col in df_all.columns if "angle_new_pos" in col]
-    ang_ori_cols = [col for col in df_all.columns if "angle_change_orientation" in col]
-
-    #melt linear_movement columns together in one
-    df_temp = df_all[mov_cols].melt(var_name = "columns", value_name = "value")
-    #count the values and plot it
-    ax = df_temp["value"].value_counts().sort_index().plot.bar()
-    for i, t in enumerate(ax.get_xticklabels()):
-        if (i % 2) != 0:
-            t.set_visible(False)
-    fig = ax.get_figure()
-    fig.set_size_inches(25, 12.5)
-    fig.savefig(path_to_save + "plot_linear_movement.png")
-
-    df_temp = df_all[ang_pos_cols].melt(var_name = "columns", value_name = "value")
-    ax = df_temp["value"].value_counts().sort_index().plot.bar()
-    for i, t in enumerate(ax.get_xticklabels()):
-        if (i % 2) != 0:
-            t.set_visible(True)
-    fig = ax.get_figure()
-    fig.set_size_inches(25, 12.5)
-    fig.savefig(path_to_save + "plot_angle_new_pos.png")
-
-    df_temp = df_all[ang_ori_cols].melt(var_name = "columns", value_name = "value")
-    ax = df_temp["value"].value_counts().sort_index().plot.bar()
-    fig = ax.get_figure()
-    fig.set_size_inches(25, 12.5)
-    fig.savefig(path_to_save + "plot_angle_change_orientation.png")
-
-
 def getClusters(paths, path_to_save, count_clusters = (20, 20, 20)):
     """
     paths should be iterable
