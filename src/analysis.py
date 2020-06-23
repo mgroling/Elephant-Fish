@@ -56,7 +56,6 @@ def calc_follow(a, b):
 def plot_follow(tracks, max_tolerated_movement=20):
     """
     Create and save Follow graph, only use center nodes for it
-    count_bins is the number bins
     Expects one node per fish at max: tracks: [fish1_x, fish1_y, fish2_x, fish2_y,..]
                                               [fish1_x, fish1_y, fish2_x, fish2_y,..]
                                               ...
@@ -92,6 +91,36 @@ def plot_follow(tracks, max_tolerated_movement=20):
     return plt.gcf()
 
 
+def plot_iid(tracks):
+    """
+    Create and save iid graph, only use center nodes for it
+    Expects one node per fish at max: tracks: [fish1_x, fish1_y, fish2_x, fish2_y,..]
+                                              [fish1_x, fish1_y, fish2_x, fish2_y,..]
+                                              ...
+    """
+    assert tracks.shape[-1] % 2 == 0
+    nfish = int(tracks.shape[-1] / 2)
+
+    iid = []
+
+    # for every fish combination calculate iid
+    for i1 in range(nfish):
+        for i2 in range(i1 + 1, nfish):
+            f1_x, f1_y = get_indices(i1)
+            f2_x, f2_y = get_indices(i2)
+            iid.append(calc_iid(tracks[:-1, f1_x:f1_y + 1], tracks[:-1, f2_x:f2_y + 1]))
+            iid.append(iid[-1])
+
+    iid = np.concatenate(iid, axis=0)
+
+    fig, ax = plt.subplots()
+    fig.subplots_adjust(top=0.93)
+    ax.set_xlim(0, 700)
+    seaborn.distplot(pd.Series(iid, name="IID [pixel]"), ax=ax)
+
+    return fig
+
+
 def plot_follow_iid(tracks):
     """
     plots fancy graph with follow and iid, only use with center values
@@ -119,13 +148,13 @@ def plot_follow_iid(tracks):
             follow.append(calc_follow(tracks[:, f2_x:f2_y + 1], tracks[:, f1_x:f1_y + 1]))
 
     follow_iid_data = pd.DataFrame(
-        {"IID [cm]": np.concatenate(iid, axis=0), "Follow": np.concatenate(follow, axis=0)}
+        {"IID [pixel]": np.concatenate(iid, axis=0), "Follow": np.concatenate(follow, axis=0)}
     )
 
     grid = seaborn.jointplot(
-        x="IID [cm]", y="Follow", data=follow_iid_data, linewidth=0, s=1, kind="scatter"
+        x="IID [pixel]", y="Follow", data=follow_iid_data, linewidth=0, s=1, kind="scatter"
     )
-    grid.ax_joint.set_xlim(0, 142)
+    grid.ax_joint.set_xlim(0, 700)
     grid.fig.set_figwidth(9)
     grid.fig.set_figheight(6)
     grid.fig.subplots_adjust(top=0.9)
@@ -177,6 +206,7 @@ def plot_locomotion(paths, path_to_save, round):
     fig = ax.get_figure()
     fig.set_size_inches(25, 12.5)
     fig.savefig(path_to_save + "plot_angle_change_orientation.png")
+
 
 def getClusters(paths, path_to_save, count_clusters = (20, 20, 20)):
     """
@@ -310,13 +340,13 @@ def plot_tlvc_iid(tracks, time_step = (1000/30), tau_seconds=(0.3, 1.3)):
             tlvc.append(calc_tlvc(b_v, a_v, tau_min_frames, tau_max_frames))
 
     tlvc_iid_data = pd.DataFrame(
-        {"IID [cm]": np.concatenate(iid, axis=0), "TLVC": np.concatenate(tlvc, axis=0)}
+        {"IID [pixel]": np.concatenate(iid, axis=0), "TLVC": np.concatenate(tlvc, axis=0)}
     )
 
     grid = seaborn.jointplot(
-        x="IID [cm]", y="TLVC", data=tlvc_iid_data, linewidth=0, s=1, kind="scatter"
+        x="IID [pixel]", y="TLVC", data=tlvc_iid_data, linewidth=0, s=1, kind="scatter"
     )
-    grid.ax_joint.set_xlim(0, 142)
+    grid.ax_joint.set_xlim(0, 700)
     grid.fig.set_figwidth(9)
     grid.fig.set_figheight(6)
     grid.fig.subplots_adjust(top=0.9)
@@ -451,12 +481,17 @@ def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), t
     if path[-1] != "/":
         path = path + "/"
 
+    # todos:
+    # Check all x and y values and adjust
+    # Rework plot_follow
+    # compute max_distance and adjust graphs
+    # reorder (maybe new evaluation.py file?)
     # Extract Center nodes
     i_center_values = [x for x in range(nfish * 4) if x % 4 < 2]
     tracksCenter = tracks[:,i_center_values]
 
     # make and save graphs
-    # missing: iid
+    save_figure(plot_iid(tracksCenter), path=(path + "iid.png"))
     save_figure(plot_follow(tracksCenter), path=(path + "follow.png"))
     save_figure(plot_follow_iid(tracksCenter), path=(path + "follow_iid.png"))
     save_figure(plot_tlvc_iid(tracksCenter, time_step, tau_seconds), path=(path + "tlvc_iid.png"))
