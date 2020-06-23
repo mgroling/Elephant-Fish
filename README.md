@@ -2,8 +2,34 @@
 
 ![Our one and only love](http://cdn.sci-news.com/images/enlarge5/image_6632_2e-Elephantnose-Fish.jpg)
 
-# Areas of improvement for Fishdata retrieval
+# Dependencies
 
+These dependencies will be needed for this project to work:
+* Python 3.6.10
+* sklearn
+* numpy
+* python
+* imageio
+* seaborn
+* matplotlib
+* scipy
+* h5py
+* sys
+* math
+* itertools
+* os
+
+# Workflow
+
+1. Install all dependencies
+2. Get the fishdata
+3. Train specific Network on fishdata using this command `[to be written]`
+4. Simulate specific Network using this command `[to be written]`
+5. Convert simulation output to trackset using this command `[to be written]`
+6. Evaluate simulation by using `evaluation.create_plots(tracksets)`
+7. Happy evaluating!
+
+Maybe: Do everything at once using this command `[]`
 
 # Given Videos
 
@@ -11,6 +37,7 @@
 
 We mapped following names to the given videos:
 
+```
 diff_1 - DiffGroup1-1
 diff_2 - DiffGroup5_2-cut
 diff_3 - DiffGroup9_1-1
@@ -21,6 +48,7 @@ same_2 - SameGroup5_3-1
 same_3 - SameGroup9_2-1
 same_4 - SameGroup31_1-1
 same_5 - SameGroup31_2-1
+```
 
 ## Frames used
 
