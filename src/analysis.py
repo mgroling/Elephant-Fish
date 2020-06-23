@@ -375,6 +375,61 @@ def plot_velocities(tracks):
     return fig_linear, fig_angular, fig_turn
 
 
+def plot_trajectories(tracks, world=(960,720)):
+    """
+    Plots tank trajectory of fishes
+    Expects one node per fish at max: tracks: [fish1_x, fish1_y, fish2_x, fish2_y,..]
+                                              [fish1_x, fish1_y, fish2_x, fish2_y,..]
+                                              ...
+    """
+    assert tracks.shape[-1] % 2 == 0
+    nfish = int(tracks.shape[-1] / 2)
+
+    data = {
+        fish: pd.DataFrame(
+            {
+                "x": tracks[:,fish*2],
+                "y": tracks[:,fish*2 + 1],
+            }
+        )
+        for fish in range(nfish)
+    }
+    combined_data = pd.concat([data[fish].assign(Agent=f"Agent {fish}") for fish in data.keys()])
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+
+    seaborn.set_style("white", {"axes.linewidth": 2, "axes.edgecolor": "black"})
+
+    seaborn.scatterplot(x="x", y="y", hue="Agent", linewidth=0, s=16, data=combined_data, ax=ax)
+    ax.set_xlim(0, world[0])
+    ax.set_ylim(0, world[1])
+    ax.invert_yaxis()
+    ax.xaxis.set_ticks_position("top")
+    ax.xaxis.set_label_position("top")
+    ax.yaxis.set_ticks_position("left")
+    ax.yaxis.set_label_position("left")
+
+    ax.scatter(
+        [frame["x"][0] for frame in data.values()],
+        [frame["y"][0] for frame in data.values()],
+        marker="h",
+        c="black",
+        s=64,
+        label="Start",
+    )
+    ax.scatter(
+        [frame["x"][len(frame["x"]) - 1] for frame in data.values()],
+        [frame["y"][len(frame["y"]) - 1] for frame in data.values()],
+        marker="x",
+        c="black",
+        s=64,
+        label="End",
+    )
+    ax.legend()
+
+    return fig
+
+
 def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), tau_seconds=(0.3, 1.3) ):
     """
     For given tracks create all plots in given path
