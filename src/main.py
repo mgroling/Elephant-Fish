@@ -3,6 +3,7 @@ from locomotion import *
 from raycasts import *
 from keras.models import Sequential
 from keras.layers import Dense, LSTM, BatchNormalization
+from itertools import chain
 import reader
 import tensorflow as tf
 import pandas as pd
@@ -59,7 +60,9 @@ class Simulation:
             self._model.fit(X[i], y[i], epochs=epochs, batch_size=batch_size, verbose=2)
 
     def testNetwork(self, timesteps = 10, save_tracks = None, start = "random"):
-        cur_X = None
+        first_pos = None
+        tracks = np.array([list(chain.from_iterable(("Fish_" + str(i) + "_linear_movement", "Fish_" + str(i) + "_angle_new_pos", "Fish_" + str(i) + "_angle_change_orientation") for i in range(0, self._count_agents)))])
+        cur_X = [[] for i in range(0, self._count_agents)]
         cur_pos = []
         locomotion = [[] for i in range(0, self._count_agents)]
         raycast_object = Raycast(self._wall_lines, self._count_bins, self._count_rays, self._fov_agents, self._fov_walls, self._view, self._count_agents)
@@ -69,13 +72,31 @@ class Simulation:
                 x_head, y_head, length, angle_rad = random.uniform(250, 700), random.uniform(125, 550), random.uniform(10,30), math.radians(random.uniform(0, 359))
                 #cur_pos right now is x_head, y_head, x_center, y_center, angle from look_vector to pos_x_axis
                 cur_pos.append([x_head, y_head, length, angle_rad])
-                #maybe make it actually random... TODO (first X)
-                cur_X = self._last_train_X
+                #take locomotion of first self._count_agents subtracks first locomotion
+                locomotion[i] = self._last_train_X[i][:, :, 0:sum(list(self._clusters_counts))].reshape(1, sum(list(self._clusters_counts)))
         elif start == "last_train":
-            # cur_pos = 
+            # cur_pos = #todo (no priority though)
             cur_X = self._last_train_X
-    
+
+        first_pos = [[cur_pos[i][j] for j in range(0, len(cur_pos[i]))] for i in range(0, len(cur_pos))]
+
         for i in range(0, timesteps):
+            if i!=0 and i%1000 == 0:
+                print("||| Timestep " + str(i) + " finished. |||")
+            new_row = None
+            
+            #get Raycasts
+            input_raycasts = [None for j in range(0, self._count_agents)]
+            for j in range(0, self._count_agents):
+                input_raycasts[j] = [cur_pos[j][0] + cur_pos[j][2]*math.cos(cur_pos[j][3]), cur_pos[j][1] + cur_pos[j][2]*math.sin(cur_pos[j][3]), cur_pos[j][0], cur_pos[j][1]]
+            input_raycasts = np.array(input_raycasts).reshape(1, self._count_agents*4)
+
+            raycasts = raycast_object.getRays(input_raycasts)
+            for j in range(0, self._count_agents):
+                cur_X[j] = np.append(np.append(locomotion[j], raycasts[:, j*self._count_rays : (j+1)*self._count_rays], axis = 1), raycasts[:, self._count_agents*self._count_rays+j*self._count_bins : self._count_agents*self._count_rays+(j+1)*self._count_bins])
+                cur_X[j] = cur_X[j].reshape(1, 1, cur_X[j].shape[-1])
+
+            #get next step
             for j in range(0, self._count_agents):
                 pred = self._model.predict(cur_X[j])
                 #collect prediction for each bin and create percentages out of them
@@ -106,18 +127,24 @@ class Simulation:
 
                 #save old locomotion for next iterations network input
                 locomotion[j] = np.append(np.append(pred_mov_bins, pred_pos_bins, axis = 1), pred_ori_bins, axis = 1)
+
+                #save locomotion for output
+                if j == 0:
+                    new_row = np.array([[pred_mov, pred_pos, pred_ori]])
+                else:
+                    new_row = np.append(new_row, np.array([[pred_mov, pred_pos, pred_ori]]), axis = 1)
             
-            input_raycasts = [None for j in range(0, self._count_agents)]
-            for j in range(0, self._count_agents):
-                input_raycasts[j] = [cur_pos[j][0] + cur_pos[j][2]*math.cos(cur_pos[j][3]), cur_pos[j][1] + cur_pos[j][2]*math.sin(cur_pos[j][3]), cur_pos[j][0], cur_pos[j][1]]
-            input_raycasts = np.array(input_raycasts).reshape(1, self._count_agents*4)
+            tracks = np.append(tracks, new_row, axis = 0)
 
-            raycasts = raycast_object.getRays(input_raycasts)
-            for j in range(0, self._count_agents):
-                cur_X[j] = np.append(np.append(locomotion[j], raycasts[:, j*self._count_rays : (j+1)*self._count_rays], axis = 1), raycasts[:, self._count_agents*self._count_rays+j*self._count_bins : self._count_agents*self._count_rays+(j+1)*self._count_bins])
-                cur_X[j] = cur_X[j].reshape(1, 1, cur_X[j].shape[-1])
+        df = pd.DataFrame(data = tracks[1:], columns = tracks[0])
 
-            #save locomotions in file TODO
+        if save_tracks != None:
+            df.to_csv(save_tracks + "locomotion_simulation.csv", sep = ";")
+            with open(save_tracks + "startposition_simulation.txt", "w+") as f:
+                for elem in first_pos:
+                    f.write("%s\n" % elem)
+        else:
+            return df, first_pos
 
 def main():
     #Set Variables
@@ -138,7 +165,7 @@ def main():
     sim = Simulation(COUNT_BINS_AGENTS, COUNT_RAYS_WALLS, RADIUS_FIELD_OF_VIEW_WALLS, RADIUS_FIELD_OF_VIEW_AGENTS, MAX_VIEW_RANGE, COUNT_FISHES, "data/clusters.txt")
     sim.setModel(model)
     sim.trainNetwork("data/locomotion_data_bin.csv", "data/raycast_data.csv", 6000, 10, 1)
-    sim.testNetwork(timesteps = 10)
+    sim.testNetwork(timesteps = 1000, save_tracks = "data/")
     # #Set Variables
     # COUNT_BINS_AGENTS = 21
     # COUNT_RAYS_WALLS = 15
