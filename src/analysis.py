@@ -456,15 +456,23 @@ def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), t
     tracksCenter = tracks[:,i_center_values]
 
     # make and save graphs
-    # missing: iid, trajectories
+    # missing: iid
     save_figure(plot_follow(tracksCenter), path=(path + "follow.png"))
     save_figure(plot_follow_iid(tracksCenter), path=(path + "follow_iid.png"))
     save_figure(plot_tlvc_iid(tracksCenter, time_step, tau_seconds), path=(path + "tlvc_iid.png"))
     save_figure(plot_tankpositions(tracksCenter), path=(path + "tankpostions.png"), size=(24,18))
+    # Velocities
     lin,ang,trn = plot_velocities(tracks)
     save_figure(lin, path=(path + "velocities_linear.png") , size=(18, 18))
     save_figure(ang, path=(path + "velocities_angular.png") , size=(18, 18))
     save_figure(trn, path=(path + "velocities_trn.png") , size=(18, 18))
+    # Trajectories
+    save_figure(plot_trajectories(tracksCenter), path=(path + "trajectories_all.png"), size=(24,18))
+    # Print trajectories for each fish
+    if nfish != 1:
+        for f in range(nfish):
+            fx, fy = get_indices(f)
+            save_figure(plot_trajectories(tracksCenter[:,[fx,fy]]), path=(path + "trajectories_agent" + str(f) + ".png"), size=(24,18))
 
 
 def save_figure(fig, path = "figures/latest_plot.png", size = (25, 12.5)):
