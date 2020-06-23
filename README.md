@@ -19,6 +19,18 @@ These dependencies will be needed for this project to work:
 * itertools
 * os
 
+# Workflow
+
+1. Install all dependencies
+2. Get the fishdata
+3. Train specific Network on fishdata using this command `[to be written]`
+4. Simulate specific Network using this command `[to be written]`
+5. Convert simulation output to trackset using this command `[to be written]`
+6. Evaluate simulation by using `evaluation.create_plots(tracksets)`
+7. Happy evaluating!
+
+Maybe: Do everything at once using this command `[]`
+
 # Given Videos
 
 ## Video Mapping
