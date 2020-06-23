@@ -29,16 +29,16 @@ class Raycast:
         self._wall_rays_header = np.array([["fish_" + str(j) + "_wall_ray_" + str((360-radius_field_of_view_walls/2 + i*(radius_field_of_view_walls/(count_rays_walls-1)))%360) for i in range(0, count_rays_walls)] for j in range(0, count_fishes)]).flatten()
         self._wall = [(360-radius_field_of_view_walls/2 + i*(radius_field_of_view_walls/(count_rays_walls-1)))%360 for i in range(0, count_rays_walls)]
 
-    def getRays(self, np_array, path_to_save_to):
+    def getRays(self, np_array, path_to_save_to = None):
         """
-        This function expects to be given a numpy array of the shape (rows, count_fishes*4) and saves a csv file at a given path (path has to end on .csv).
+        This function expects to be given a numpy array of the shape (rows, count_fishes*4) and saves a csv file at path_to_save_to (path has to end on .csv) if path_to_save_to != None.
         The information about each given fish (or object in general) should be first_position_x, first_position_y, second_position_x, second_position_y.
         It is assumed that the fish is looking into the direction of first_positon_x - second_position_x for x and first_positon_y - second_position_y for y.
         """
         self._getFish(np_array)
         output_np_array = np.array([np.append(self._bins_header, self._wall_rays_header)])
         for i in range(0, len(np_array)):
-            if i%1000 == 0:
+            if i!=0 and i%1000 == 0:
                 print("||| Frame " + str(i) + " finished. |||")
             new_row = [[] for k in range(0, len(self._bins_header))]
             distance_row = []
@@ -65,8 +65,11 @@ class Raycast:
             new_row = [[max(new_row[i], default = 0) for i in range(0, len(self._bins_header))] + distance_row]
             output_np_array = np.append(output_np_array, new_row, axis = 0)
 
-        df = pd.DataFrame(data = output_np_array[1:], columns = output_np_array[0])
-        df.to_csv(path_to_save_to, index = None, sep = ";")
+        if path_to_save_to == None:
+            return output_np_array[1:]
+        else:
+            df = pd.DataFrame(data = output_np_array[1:], columns = output_np_array[0])
+            df.to_csv(path_to_save_to, index = None, sep = ";")
 
     def _getFishRays(self, fish_id, row, look_vector):
         return_list = [[],[]]

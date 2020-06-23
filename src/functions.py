@@ -128,9 +128,10 @@ def get_indices(i):
     """
     return (2*i, 2*i + 1)
 
+
 def readClusters(path):
     """
-    reads saved clusters from the getClusters function and returns a list for each locomotion type, they are sorted like in the file
+    reads saved clusters from the getClusters function and returns a list for each locomotion type, they are ordered like in the file
     """
     with open(path, "r") as f:
         content = f.readlines()
@@ -138,11 +139,53 @@ def readClusters(path):
     content = [x.strip() for x in content]
     count_clusters = tuple(map(int, content[1][1:-1].split(', ')))
 
-    mov_clusters = content[2:2+count_clusters[0]]
-    pos_clusters = content[2+count_clusters[0]:2+count_clusters[0]+count_clusters[1]]
-    ori_clusters = content[2+count_clusters[0]+count_clusters[1]:2+count_clusters[0]+count_clusters[1]+count_clusters[2]]
+    mov_clusters_ = content[2:2+count_clusters[0]]
+    pos_clusters_ = content[2+count_clusters[0]:2+count_clusters[0]+count_clusters[1]]
+    ori_clusters_ = content[2+count_clusters[0]+count_clusters[1]:2+count_clusters[0]+count_clusters[1]+count_clusters[2]]
+
+    mov_clusters = [float(elem) for elem in mov_clusters_]
+    pos_clusters = [float(elem) for elem in pos_clusters_]
+    ori_clusters = [float(elem) for elem in ori_clusters_]
 
     return mov_clusters, pos_clusters, ori_clusters
+
+
+def distancesToClusters(points, clusters):
+    """
+    computes distances from all points to all clusters
+    not sure if this works for non 1d data
+    """
+    distances = None
+    for j in range(0, len(clusters)):
+        temp = np.abs(points - float(clusters[j])).reshape(-1, 1)
+        if j == 0:
+            distances = temp
+        else:
+            distances = np.append(distances, temp, axis = 1)
+
+    return distances
+
+
+def softmax(np_array):
+    """
+    Compute softmax values row-wise (probabilites)
+    """
+    temp = np.exp(np_array - np.max(np_array, axis = 1).reshape(-1, 1))
+    return np.divide(temp, np.sum(temp, axis = 1).reshape(-1, 1))
+
+
+def selectPercentage(array):
+    """
+    Given an array of percentages that add up to 1, this selects one of the numbers with the certain percentage given
+    returns the index of the selected percentage
+    """
+    value = 0
+    rand = np.random.rand()
+    for i in range(0, len(array)):
+        value += array[i]
+        if value > rand:
+            return i
+
 
 def convertRadiansRange(ang_vel):
     """

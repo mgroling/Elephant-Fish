@@ -1,12 +1,12 @@
 import numpy as np
 import pandas as pd
 import math
-from functions import getAngle, getDistance, readClusters
+from functions import getAngle, getDistance, readClusters, distancesToClusters, softmax
 from itertools import chain
 from reader import *
 from sklearn.cluster import KMeans
 
-def getLocomotion(np_array, path_to_save_to, saveToFile=True, mode="radians"):
+def getLocomotion(np_array, path_to_save_to = None, saveToFile=True, mode="radians"):
     """
     This function expects to be given a numpy array of the shape (rows, count_fishes*4) and saves a csv file at a given path (path has to end on .csv).
     The information about each given fish (or object in general) should be first_position_x, first_position_y, second_position_x, second_position_y.
@@ -18,7 +18,7 @@ def getLocomotion(np_array, path_to_save_to, saveToFile=True, mode="radians"):
         output = np.empty([0,int(np_array.shape[1]/4)*3])
 
     for i in range(0, np_array.shape[0]-1):
-        if i%1000 == 0:
+        if i!=0 and i%1000 == 0:
             print("||| Frame " + str(i) + " finished. |||")
         new_row = [0 for k in range(0, int(3*np_array.shape[1]/4))]
         for j in range(0, int(np_array.shape[1]/4)):
@@ -47,18 +47,17 @@ def getLocomotion(np_array, path_to_save_to, saveToFile=True, mode="radians"):
         output = np.append(output, [new_row], axis = 0)
 
     if saveToFile:
-        df = pd.DataFrame(data = output[1:], columns = output[0])
-        df.to_csv(path_to_save_to, index = None, sep = ";")
+        if path_to_save_to == None:
+            return output[1:]
+        else:
+            df = pd.DataFrame(data = output[1:], columns = output[0])
+            df.to_csv(path_to_save_to, index = None, sep = ";")
     else:
         return output
 
-def convertLocmotionToBin(path, path_to_save, clusters_path, probabilities = True):
+def convertLocmotionToBin(loco, clusters_path, path_to_save = None, probabilities = True):
     #get cluster centers
     clusters_mov, clusters_pos, clusters_ori = readClusters(clusters_path)
-
-    #get locomotion
-    df = pd.read_csv(path, sep = ";")
-    loco = df.to_numpy()
 
     result = None
     #convert locomotion into bin representation for each fish
@@ -83,33 +82,14 @@ def convertLocmotionToBin(path, path_to_save, clusters_path, probabilities = Tru
             #todo
             pass
 
-    #save it
-    df = pd.DataFrame(data = result[1:], columns = result[0])
-    df.to_csv(path_to_save, sep = ";")
-
-def distancesToClusters(points, clusters):
-    """
-    computes distances from all points to all clusters
-    not sure if this works for non 1d data
-    """
-    distances = None
-    for j in range(0, len(clusters)):
-        temp = np.abs(points - float(clusters[j])).reshape(-1, 1)
-        if j == 0:
-            distances = temp
-        else:
-            distances = np.append(distances, temp, axis = 1)
-
-    return distances
-
-def softmax(np_array):
-    """
-    Compute softmax values row-wise (probabilites)
-    """
-    temp = np.exp(np_array - np.max(np_array, axis = 1).reshape(-1, 1))
-    return np.divide(temp, np.sum(temp, axis = 1).reshape(-1, 1))
+    if path_to_save == None:
+        return result[1:]
+    else:
+        df = pd.DataFrame(data = result[1:], columns = result[0])
+        df.to_csv(path_to_save, sep = ";")
 
 def main():
+    # file = "data/sleap_1_diff1.h5"
     # file = "data/sleap_1_Diffgroup1-1.h5"
 
     # temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])
@@ -122,7 +102,12 @@ def main():
     # #get locomotion and save it
     # getLocomotion(temp , "data/locomotion_data.csv")
 
-    convertLocmotionToBin("data/locomotion_data.csv", "data/locomotion_data_bin.csv", "data/clusters.txt")
+    #get locomotion
+    df = pd.read_csv("data/locomotion_data.csv", sep = ";")
+    loco = df.to_numpy()
+
+    convertLocmotionToBin(loco, "data/clusters.txt", "data/locomotion_data_bin.csv")
+
 
 if __name__ == "__main__":
     main()
