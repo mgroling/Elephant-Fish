@@ -53,7 +53,7 @@ def getLocomotion(np_array, path_to_save_to, saveToFile=True, mode="radians"):
         df = pd.DataFrame(data = output[1:], columns = output[0])
         df.to_csv(path_to_save_to, index = None, sep = ";")
     else:
-        return output[1:]
+        return output
 
 def convertLocmotionToBin(path, path_to_save, clusters_path, probabilities = True):
     #get cluster centers

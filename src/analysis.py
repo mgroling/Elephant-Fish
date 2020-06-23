@@ -278,7 +278,7 @@ def plot_tankpositions(tracks):
     return fig
 
 
-def plot_tlvc_iid(tracks, time_step = (1000/30), *, tau_seconds=(0.3, 1.3)):
+def plot_tlvc_iid(tracks, time_step = (1000/30), tau_seconds=(0.3, 1.3)):
     """
     TLVC_IDD by Moritz Maxeiner
     Expects one node per fish at max: tracks: [fish1_x, fish1_y, fish2_x, fish2_y,..]
@@ -375,14 +375,17 @@ def plot_velocities(tracks):
     return fig_linear, fig_angular, fig_turn
 
 
-def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), *, tau_seconds=(0.3, 1.3) ):
+def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), tau_seconds=(0.3, 1.3) ):
     """
     For given tracks create all plots in given path
     tracks only is allowed to include one node per fish!
-    Expects one node per fish at max: tracks: [fish1_x, fish1_y, fish2_x, fish2_y,..]
-                                              [fish1_x, fish1_y, fish2_x, fish2_y,..]
-                                              ...
+    Expects two nodes per fish exactly: tracks: [head1_x, head1_y, center1_x, center1_y, head2_x, head2_y, center2_x, center2_y,...]
+                                                [head1_x, head1_y, center1_x, center1_y, head2_x, head2_y, center2_x, center2_y,...]
+                                                ...
     """
+    assert tracks.shape[-1] % 4 == 0
+    nfish = int(tracks.shape[-1] / 4)
+
     # handle dir
     if not os.path.isdir(path):
         # create dir
@@ -393,13 +396,20 @@ def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), *
     if path[-1] != "/":
         path = path + "/"
 
+    # Extract Center nodes
+    i_center_values = [x for x in range(nfish * 4) if x % 4 < 2]
+    tracksCenter = tracks[:,i_center_values]
+
     # make and save graphs
-    # missing: iid, locomotions, trajectories
-    save_figure(plot_follow(tracks), path=(path + "follow.png"))
-    save_figure(plot_follow_iid(tracks), path=(path + "follow_iid.png"))
-    save_figure(plot_tlvc_iid(tracks, time_step, tau_seconds), path=(path + "tlvc_iid.png"))
-    save_figure(plot_tankpositions(tracks), path=(path + "tankpostions.png"))
-    # save_figure(plot_locomotion(tracks), path=(path + "locomotion"))
+    # missing: iid, trajectories
+    save_figure(plot_follow(tracksCenter), path=(path + "follow.png"))
+    save_figure(plot_follow_iid(tracksCenter), path=(path + "follow_iid.png"))
+    save_figure(plot_tlvc_iid(tracksCenter, time_step, tau_seconds), path=(path + "tlvc_iid.png"))
+    save_figure(plot_tankpositions(tracksCenter), path=(path + "tankpostions.png"), size=(24,18))
+    lin,ang,trn = plot_velocities(tracks)
+    save_figure(lin, path=(path + "velocities_linear.png") , size=(18, 18))
+    save_figure(ang, path=(path + "velocities_angular.png") , size=(18, 18))
+    save_figure(trn, path=(path + "velocities_trn.png") , size=(18, 18))
 
 
 def save_figure(fig, path = "figures/latest_plot.png", size = (25, 12.5)):
@@ -416,10 +426,7 @@ def main():
     file = "data/sleap_1_diff1.h5"
     tracks = reader.extract_coordinates(file, [b'head',b'center'])
 
-    lin,ang,trn = plot_velocities(tracks)
-    save_figure(lin, "figures/velocities_linear.png" , size=(18, 18))
-    save_figure(ang, "figures/velocities_angular.png" , size=(18, 18))
-    save_figure(trn, "figures/velocities_trn.png" , size=(18, 18))
+    create_plots(tracks)
 
 if __name__ == "__main__":
     main()
