@@ -354,17 +354,8 @@ def plot_velocities(tracks):
 
     assert tracks.shape[-1] % 4 == 0
     nfish = int(tracks.shape[-1] / 4)
-    dis = get_distances(tracks)
-    print("avg:", np.mean(dis, axis=0))
-    print("max:", np.amax(dis, axis=0))
-    print("min:", np.amin(dis, axis=0))
 
     locs = locomotion.getLocomotion(tracks, None, False)
-
-    print("Before:")
-    print("avg:", np.mean(locs, axis=0))
-    print("max:", np.amax(locs, axis=0))
-    print("min:", np.amin(locs, axis=0))
 
     # Get dem indices
     i_lin = [x * 3 for x in range(nfish)]
@@ -378,20 +369,23 @@ def plot_velocities(tracks):
     linear_velocities = np.concatenate(linear_velocities, axis=0)
     turn_velocities = np.concatenate(turn_velocities, axis=0)
 
+    angular_velocities = convertRadiansRange(angular_velocities)
+    turn_velocities = convertRadiansRange(turn_velocities)
+
     fig_angular, ax = plt.subplots(figsize=(18, 18))
     fig_angular.subplots_adjust(top=0.93)
-    ax.set_xlim(0, np.pi * 2)
-    seaborn.distplot(pd.Series(angular_velocities, name="Angular velocities"), ax=ax)
+    ax.set_xlim(-np.pi, np.pi)
+    seaborn.distplot(pd.Series(angular_velocities, name="Angular velocities"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
 
     fig_turn, ax = plt.subplots(figsize=(18, 18))
     fig_turn.subplots_adjust(top=0.93)
-    ax.set_xlim(0, np.pi * 2)
-    seaborn.distplot(pd.Series(turn_velocities, name="Turning velocities"), ax=ax)
+    ax.set_xlim(-np.pi, np.pi)
+    seaborn.distplot(pd.Series(turn_velocities, name="Turning velocities"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
 
     fig_linear, ax = plt.subplots(figsize=(18, 18))
     fig_linear.subplots_adjust(top=0.93)
     ax.set_xlim(-20, 20)
-    seaborn.distplot(pd.Series(linear_velocities, name="Linear velocities"), ax=ax)
+    seaborn.distplot(pd.Series(linear_velocities, name="Linear velocities"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
 
     return fig_linear, fig_angular, fig_turn
 
