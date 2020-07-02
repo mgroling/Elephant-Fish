@@ -3,7 +3,6 @@ import pandas as pd
 import numpy as np
 import sys
 import scipy
-import locomotion
 import functions
 
 def read_slp(file, loud = False):
@@ -273,7 +272,7 @@ def correct_wrongly_interpolated_outliers(data, col1, col2, out_group, max_toler
         correct_outlier(data, col1, col2, i_first, max_tolerated_movement)
 
 
-def interpolate_outliers(data, max_tolerated_movement=20, verbose = False):
+def interpolate_outliers_rec(data, max_tolerated_movement=20, verbose = False):
     """
     input: values in the format of extract_coordinates()
     output: values in same format, without outlier values
@@ -327,14 +326,109 @@ def interpolate_outliers(data, max_tolerated_movement=20, verbose = False):
         print("Outliers left: ", np.where(dist[:,] > max_tolerated_movement))
 
 
+def error_start(index):
+    """
+    error message and print. Quick and dirty
+    """
+    print("Max_tolerated movement violation at start of video:")
+    print("Cut video before Frame ", index)
+    sys.exit()
 
-def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2], interpolate_nans = True, interpolate_outlier = True, verbose = False):
+
+def error_end(index):
+    """
+    error message print. Quick and dirty
+    """
+    print("Max_tolerated movement violation at end of video:")
+    print("Cut video after Frame ", index)
+    sys.exit()
+
+
+def avg_dis(data, col1, col2, i_start, i_end, n_points):
+    """
+    Computes the average distance between i_start and i_end
+    for given amount of n_points
+    """
+    assert n_points > 1
+    return functions.getDistance(data[i_start,col1], data[i_start, col2], data[i_end,col1], data[i_end,col2]) / (n_points - 1)
+
+
+def interpolate_outliers(data, max_tolerated_movement=20, verbose = False):
+    """
+    input: values in the format of extract_coordinates()
+    output: values in same format, without outlier values
+    careful: this directly modifies your data
+    do not set max_tolerated_movement less then 16 (15.06) - it will not work :)
+    """
+    if verbose:
+        print("Interpolate Outliers:")          # Announce this function loudly and passionately
+    n_rows, n_cols = data.shape
+
+    # Get distances of all points between 2 frames
+    dist = functions.get_distances(data)
+
+    if verbose:
+        print("Before:")
+        print("avg:", np.mean(dist, axis=0))
+        print("max:", np.amax(dist, axis=0))
+        print("min:", np.amin(dist, axis=0))
+
+    assert n_rows >= 2
+    for col in range(int(n_cols/2)):
+        # Get outliers of specific column
+        i_out =list( np.where(dist[:,col] > max_tolerated_movement)[0])
+        # column indices in 'data'
+        col1, col2 = 2*col, 2*col + 1
+
+        for outlier in i_out:
+            # recheck if outlier candidate is still valid, often when fixing an outlier you fix it for the next distance aswell
+            curr_dis = functions.getDistance(data[outlier,col1], data[outlier,col2], data[outlier + 1,col1], data[outlier + 1,col2])
+            if abs(curr_dis) > max_tolerated_movement:
+                i_curr = outlier + 1
+                i_start = outlier
+                # Find next point which is no outlier
+                while( dist[i_curr,col] > max_tolerated_movement ):
+                    i_curr += 1
+                    if i_curr >= n_rows:
+                        error_end(outlier)
+                i_end = i_curr
+                # Compute distances and check if we would interpolate,
+                # would the dis be > then max_tolerated_movement
+                # if yes, take further points until it works
+                switch = True
+                while( avg_dis(data, col1, col2, i_start, i_end, (i_end - i_start + 1)) > max_tolerated_movement ):
+                    if switch:
+                        i_end += 1
+                        if( i_end >= n_rows ):
+                            error_end(outlier)
+                    else:
+                        i_start -= 1
+                        if( i_start < 0 ):
+                            error_start(i_curr) #i_curr because it has the latest og outlier
+
+                fill_steps_in(data, col1, i_start, i_end, (i_end - i_start))
+                fill_steps_in(data, col2, i_start, i_end, (i_end - i_start))
+
+
+    # To check, we recalculate distances and look if there is any outliers still left
+    if verbose:
+        dist = functions.get_distances(data)
+        print("After:")
+        print("avg:", np.mean(dist, axis=0))
+        print("max:", np.amax(dist, axis=0))
+        print("min:", np.amin(dist, axis=0))
+        print("Outliers left: ", np.where(dist[:,] > max_tolerated_movement))
+
+
+def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2], interpolate_nans = True, interpolate_outlier = True, i_o_rec = False, verbose = False):
     """
     Extracts specific rows for given sleap file and returns numpy array, cleaning up data if not specified otherwise
     interpolate missing values will always be run if interpolate outliers is activated
     nodes_to_extract: String array containing at least one of: [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end']
     fish_to_extract: array containing the fishes you want to extract
     Output: nparray of form: [frames, [node0_fish0_x, node0_fish0_y, node1_fish0_x, node1_fish0_y, ..., node0_fish1_x, node0_fish1_y, ...]
+    i_o_rec: interpolation of outliers recursive, may run in recursion limit and takes
+             a bit longer, but sometimes is more accurate and handles edge cases
     """
     ret = extract_rows(file, nodes_to_extract, fish_to_extract, verbose=verbose)
 
@@ -342,16 +436,19 @@ def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2], inter
         interpolate_missing_values(ret, verbose=verbose)
 
     if interpolate_outlier:
-        interpolate_outliers(ret, verbose=verbose)
+        if i_o_rec:
+            interpolate_outliers_rec(ret, verbose=verbose)
+        else:
+            interpolate_outliers(ret, verbose=verbose)
 
     return ret
 
 
 
 if __name__ == "__main__":
-    file = "data/sleap_1_diff1.h5"
+    file = "data/sleap_1_diff4.h5"
 
-    output = extract_coordinates(file, [b'head',b'center'], fish_to_extract=[0])
+    output = extract_coordinates(file, [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'], fish_to_extract=[0], verbose=True)
     #output2 = extract_coordinates(file2, [b'head'], fish_to_extract=[0])
     print(output.shape)
     #print(output2[9145:9147,])

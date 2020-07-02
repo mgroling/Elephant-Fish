@@ -128,13 +128,14 @@ def get_indices(i):
     """
     return (2*i, 2*i + 1)
 
+
 def readClusters(path):
     """
     reads saved clusters from the getClusters function and returns a list for each locomotion type, they are ordered like in the file
     """
     with open(path, "r") as f:
         content = f.readlines()
-    
+
     content = [x.strip() for x in content]
     count_clusters = tuple(map(int, content[1][1:-1].split(', ')))
 
@@ -148,6 +149,7 @@ def readClusters(path):
 
     return mov_clusters, pos_clusters, ori_clusters
 
+
 def distancesToClusters(points, clusters):
     """
     computes distances from all points to all clusters
@@ -158,10 +160,11 @@ def distancesToClusters(points, clusters):
         temp = np.abs(points - float(clusters[j])).reshape(-1, 1)
         if j == 0:
             distances = temp
-        else: 
+        else:
             distances = np.append(distances, temp, axis = 1)
-    
+
     return distances
+
 
 def softmax(np_array):
     """
@@ -169,6 +172,7 @@ def softmax(np_array):
     """
     temp = np.exp(np_array - np.max(np_array, axis = 1).reshape(-1, 1))
     return np.divide(temp, np.sum(temp, axis = 1).reshape(-1, 1))
+
 
 def selectPercentage(array):
     """
@@ -181,3 +185,11 @@ def selectPercentage(array):
         value += array[i]
         if value > rand:
             return i
+
+
+def convertRadiansRange(ang_vel):
+    """
+    converts angular velocities to [-pi,pi] from [0,2*pi]
+    """
+    ang_vel[ang_vel > np.pi] = ang_vel[ang_vel > np.pi] - 2*np.pi
+    return ang_vel
