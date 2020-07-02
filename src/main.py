@@ -157,8 +157,8 @@ def main():
     CLUSTER_COUNTS = (15, 20, 17)
 
     model = Sequential()
-    model.add(LSTM(64, input_shape=(1, COUNT_BINS_AGENTS+COUNT_RAYS_WALLS+sum(list(CLUSTER_COUNTS))), dropout = 0.1))
-    model.add(Dense(16))
+    model.add(LSTM(256, input_shape=(1, COUNT_BINS_AGENTS+COUNT_RAYS_WALLS+sum(list(CLUSTER_COUNTS))), dropout = 0.1))
+    model.add(Dense(128))
     model.add(Dense(sum(list(CLUSTER_COUNTS))))
     model.compile(loss='mean_squared_error', optimizer='adam')
 
