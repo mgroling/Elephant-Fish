@@ -89,8 +89,7 @@ def convertLocmotionToBin(loco, clusters_path, path_to_save = None, probabilitie
         df.to_csv(path_to_save, sep = ";")
 
 def main():
-    # file = "data/sleap_1_diff1.h5"
-    # file = "data/sleap_1_Diffgroup1-1.h5"
+    # file = "data/sleap_1_diff4.h5"
 
     # temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])
 
@@ -100,13 +99,13 @@ def main():
     # print("shape:",temp.shape)
 
     # #get locomotion and save it
-    # getLocomotion(temp , "data/locomotion_data.csv")
+    # getLocomotion(temp, "data/locomotion_data_diff4.csv")
 
-    #get locomotion
-    df = pd.read_csv("data/locomotion_data.csv", sep = ";")
+    # get locomotion
+    df = pd.read_csv("data/locomotion_data_diff4.csv", sep = ";")
     loco = df.to_numpy()
 
-    convertLocmotionToBin(loco, "data/clusters.txt", "data/locomotion_data_bin.csv")
+    convertLocmotionToBin(loco, "data/clusters.txt", "data/locomotion_data_bin_diff4.csv")
 
 
 if __name__ == "__main__":
