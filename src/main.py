@@ -29,6 +29,9 @@ class Simulation:
     def setModel(self, model):
         self._model = model
 
+    def getModel(self):
+        return self._model
+
     def trainNetwork(self, locomotion_path, raycasts_path, subtrack_length, batch_size, epochs):
         X = []
         y = []
@@ -164,8 +167,11 @@ def main():
 
     sim = Simulation(COUNT_BINS_AGENTS, COUNT_RAYS_WALLS, RADIUS_FIELD_OF_VIEW_WALLS, RADIUS_FIELD_OF_VIEW_AGENTS, MAX_VIEW_RANGE, COUNT_FISHES, "data/clusters.txt")
     sim.setModel(model)
-    sim.trainNetwork("data/locomotion_data_bin.csv", "data/raycast_data.csv", 6000, 10, 1)
-    sim.testNetwork(timesteps = 1000, save_tracks = "data/")
+    sim.trainNetwork("data/locomotion_data_bin_diff1.csv", "data/raycast_data_diff1.csv", 6000, 10, 10)
+    sim.trainNetwork("data/locomotion_data_bin_diff2.csv", "data/raycast_data_diff2.csv", 6000, 10, 10)
+    sim.trainNetwork("data/locomotion_data_bin_diff3.csv", "data/raycast_data_diff3.csv", 6000, 10, 10)
+    sim.trainNetwork("data/locomotion_data_bin_diff4.csv", "data/raycast_data_diff4.csv", 6000, 10, 10)
+    sim.testNetwork(timesteps = 18000, save_tracks = "data/")
     # #Set Variables
     # COUNT_BINS_AGENTS = 21
     # COUNT_RAYS_WALLS = 15
