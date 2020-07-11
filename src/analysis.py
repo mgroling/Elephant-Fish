@@ -111,7 +111,7 @@ def getClusters(paths, path_to_save, count_clusters = (20, 20, 20), verbose = Fa
         plt.xticks(np.arange(count_clusters[0]), np.round(temp_2, 3))
         plt.savefig("figures/pos_elems_per_cluster_" + str(count_clusters[0]))
         plt.clf()
-        
+
         freq_ori = collections.Counter(kmeans_ori.labels_)
         centers = kmeans_ori.cluster_centers_
         x, y = zip(*freq_ori.items())
