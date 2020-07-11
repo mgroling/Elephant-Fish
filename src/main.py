@@ -150,6 +150,7 @@ class Simulation:
             return df, first_pos
 
 def main():
+    #importance of variables for analysis later: https://stackoverflow.com/questions/45361559/feature-importance-chart-in-neural-network-using-keras-in-python/61861991#61861991
     #Set Variables
     COUNT_BINS_AGENTS = 21
     COUNT_RAYS_WALLS = 15
@@ -171,6 +172,8 @@ def main():
     sim.trainNetwork("data/locomotion_data_bin_diff2.csv", "data/raycast_data_diff2.csv", 6000, 10, 10)
     sim.trainNetwork("data/locomotion_data_bin_diff3.csv", "data/raycast_data_diff3.csv", 6000, 10, 10)
     sim.trainNetwork("data/locomotion_data_bin_diff4.csv", "data/raycast_data_diff4.csv", 6000, 10, 10)
+    model = sim.getModel()
+    model.save("models/model_diff_1_to_4/")
     sim.testNetwork(timesteps = 18000, save_tracks = "data/")
     # #Set Variables
     # COUNT_BINS_AGENTS = 21

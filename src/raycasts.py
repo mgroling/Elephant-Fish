@@ -37,6 +37,7 @@ class Raycast:
         """
         self._getFish(np_array)
         output_np_array = np.array([np.append(self._bins_header, self._wall_rays_header)])
+        temp = np.empty([len(np_array), output_np_array.shape[1]])
         for i in range(0, len(np_array)):
             if i!=0 and i%1000 == 0:
                 print("||| Frame " + str(i) + " finished. |||")
@@ -62,8 +63,10 @@ class Raycast:
                 #wall rays
                 distance_row = distance_row + self._getWallRays(start_pos, look_vector)
 
-            new_row = [[max(new_row[i], default = 0) for i in range(0, len(self._bins_header))] + distance_row]
-            output_np_array = np.append(output_np_array, new_row, axis = 0)
+            new_row = [max(new_row[i], default = 0) for i in range(0, len(self._bins_header))] + distance_row
+            temp[i] = new_row
+
+        output_np_array = np.append(output_np_array, temp, axis = 0)
 
         if path_to_save_to == None:
             return output_np_array[1:]
@@ -120,24 +123,30 @@ def main():
     WALL_RAYS_WALLS = 15
     RADIUS_FIELD_OF_VIEW_WALLS = 180
     RADIUS_FIELD_OF_VIEW_AGENTS = 300
-    MAX_VIEW_RANGE = 600
+    MAX_VIEW_RANGE = 709
     COUNT_FISHES = 3
 
     #Extract Raycasts
     our_wall_lines = defineLines(getRedPoints(path = "data/final_redpoint_wall.jpg"))
+    # max_dist = 0
+    # for i in range(0, len(our_wall_lines)):
+    #     for j in range(0, len(our_wall_lines)):
+    #         temp = getDistance(our_wall_lines[i][0], our_wall_lines[i][1], our_wall_lines[j][0], our_wall_lines[j][1])
+    #         if temp > max_dist:
+    #             max_dist = temp
+    
+    # print(max_dist) #max dist = 708.3784299369935
+
     ray = Raycast(our_wall_lines, COUNT_BINS_AGENTS, WALL_RAYS_WALLS, RADIUS_FIELD_OF_VIEW_AGENTS, RADIUS_FIELD_OF_VIEW_WALLS, MAX_VIEW_RANGE, COUNT_FISHES)
 
-    file = "data/sleap_1_diff3.h5"
+    file = "data/sleap_1_diff2.h5"
 
-    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])
-
-    #remove rows with Nans in it
-    temp = temp[~np.isnan(temp).any(axis=1)]
+    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])[:]
 
     print("shape:",temp.shape)
 
     #get rays and save them
-    ray.getRays(temp , "data/raycast_data_diff3.csv")
+    ray.getRays(temp , "data/raycast_data_diff2.csv")
 
 if __name__ == "__main__":
     main()
