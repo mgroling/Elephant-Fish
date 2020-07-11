@@ -118,9 +118,10 @@ def row_l2c( locs, coords, trns ):
     lins = locs[[2 * x for x in range(nfish)]]
     angs = locs[[2 * x + 1 for x in range(nfish)]]
     nangs = (angs + trns) % ( 2 * np.pi )
-    print( angs )
-    print( trns )
-    print( nangs )
+    print( "lins ", lins )
+    print( "angs ", angs )
+    print( "trns ", trns )
+    print( "nangs ", nangs )
     xvals = np.cos( nangs ) * lins
     yvals = np.sin( nangs ) * lins
 
@@ -174,12 +175,13 @@ def convertLocomotionToCoordinates( loc, startpoints ):
 
 
 def main():
-    file = "data/sleap_1_diff4.h5"
+    file = "data/sleap_1_diff2.h5"
 
     temp = extract_coordinates(file, [b'center'], fish_to_extract=[0,1,2])
 
     print(temp[0])
     print(temp[1])
+    print( getDistance(temp[0,0], temp[0,1], temp[1,0], temp[1,1]) )
     # #remove rows with Nans in it
     # temp = temp[~np.isnan(temp).any(axis=1)]
 
@@ -189,8 +191,9 @@ def main():
     # getLocomotion(temp, "data/locomotion_data_diff4.csv")
 
     # get locomotion
-    df = pd.read_csv("data/locomotion_data_diff4.csv", sep = ";")
+    df = pd.read_csv("data/locomotion_data_diff2.csv", sep = ";")
     loc = df.to_numpy()
+    print("loc 0: ", loc[0])
 
     convertLocomotionToCoordinates( loc, [223.4468689, 499.31707764, 327.28710938, 512.76531982, 234.62036133, 553.91589355] )
 
