@@ -110,7 +110,7 @@ def row_l2c( locs, coords, trns ):
     # alternative
     xs = [2 * x for x in range(nfish)]
     ys = [2 * x + 1 for x in range(nfish)]
-    lins = locs[[2 * x for x in range(nfish)]]
+    lins = np.abs( locs[[2 * x for x in range(nfish)]] )
     angs = locs[[2 * x + 1 for x in range(nfish)]]
     nangs = (angs + trns) % ( 2 * np.pi )
     print( "lins ", lins )
@@ -124,11 +124,14 @@ def row_l2c( locs, coords, trns ):
     print(yvals)
 
     print(out)
+    t = out.copy()
 
-    out[xs] = out[xs] + xvals
-    out[ys] = out[ys] + yvals
+    out[xs] = out[xs] + yvals
+    out[ys] = out[ys] + xvals
 
     print(out)
+
+    print( getDistance(t[0], t[1], out[0], out[1]) )
 
 
 
@@ -161,7 +164,7 @@ def convertLocomotionToCoordinates( loc, startpoints ):
     inds = [x for x in range(col) if (x % 3) == 1 or (x % 3) == 0]
     loc = loc[:,inds]
 
-    row_l2c( loc[0] , out[0], locT[0] )
+    row_l2c( loc[0] , out[0], locT[1] )
 
     for i in range(1, row + 1):
         pass
@@ -172,25 +175,18 @@ def convertLocomotionToCoordinates( loc, startpoints ):
 def main():
     file = "data/sleap_1_diff2.h5"
 
-    temp = extract_coordinates(file, [b'center'], fish_to_extract=[0,1,2])
+    temp = extract_coordinates(file, [b'head'], fish_to_extract=[0,1,2])
 
     print(temp[0])
     print(temp[1])
     print( getDistance(temp[0,0], temp[0,1], temp[1,0], temp[1,1]) )
-    # #remove rows with Nans in it
-    # temp = temp[~np.isnan(temp).any(axis=1)]
-
-    print("shape:",temp.shape)
-
-    #get locomotion and save it
-    getLocomotion(temp, "data/locomotion_data_same3.csv")
 
     # get locomotion
     df = pd.read_csv("data/locomotion_data_diff2.csv", sep = ";")
     loc = df.to_numpy()
     print("loc 0: ", loc[0])
 
-    convertLocomotionToCoordinates( loc, [223.4468689, 499.31707764, 327.28710938, 512.76531982, 234.62036133, 553.91589355] )
+    convertLocomotionToCoordinates( loc, [282.05801392, 85.2730484, 396.72821045, 223.87356567, 345.84439087, 438.7845459] )
 
 
     # convertLocmotionToBin(loco, "data/clusters.txt", "data/locomotion_data_bin_diff4.csv")
