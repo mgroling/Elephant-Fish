@@ -129,7 +129,7 @@ def main():
 
     file = "data/sleap_1_diff3.h5"
 
-    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])
+    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])[0:17000]
 
     #remove rows with Nans in it
     temp = temp[~np.isnan(temp).any(axis=1)]

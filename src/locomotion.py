@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import math
-from functions import getAngle, getDistance, readClusters, distancesToClusters, softmax
+from functions import getAngle, getDistance, readClusters, distancesToClusters, softmax, get_indices
 from itertools import chain
 from reader import *
 from sklearn.cluster import KMeans
@@ -88,11 +88,98 @@ def convertLocmotionToBin(loco, clusters_path, path_to_save = None, probabilitie
         df = pd.DataFrame(data = result[1:], columns = result[0])
         df.to_csv(path_to_save, sep = ";")
 
+
+def row_l2c( locs, coords, trns ):
+    """
+    Returns 1d ndarray with new coordinates based on previos coordinades and given locs
+    """
+    nfish = len(coords) // 2
+
+    out = np.array( coords )
+
+    for f in range(nfish):
+        ix, iy = get_indices( f )
+        x = coords[ix]
+        y = coords[iy]
+        lin = locs[2 * f]
+        ang = locs[2 * f + 1]
+
+        nang = (ang + trns[f]) % 2*np.pi
+
+        # Polar to kartesian
+        vx = math.cos( nang ) * lin
+        vy = math.sin( nang ) * lin
+
+
+
+    # alternative
+    xs = [2 * x for x in range(nfish)]
+    ys = [2 * x + 1 for x in range(nfish)]
+    lins = locs[[2 * x for x in range(nfish)]]
+    angs = locs[[2 * x + 1 for x in range(nfish)]]
+    nangs = (angs + trns) % ( 2 * np.pi )
+    print( angs )
+    print( trns )
+    print( nangs )
+    xvals = np.cos( nangs ) * lins
+    yvals = np.sin( nangs ) * lins
+
+    print(xvals)
+    print(yvals)
+
+    print(out)
+
+    out[xs] = out[xs] + xvals
+    out[ys] = out[ys] + yvals
+
+    print(out)
+
+
+
+def convertLocomotionToCoordinates( loc, startpoints ):
+    """
+    Converts locomotion np array to coordinates,
+    assumens first fish "looks" upwards
+    loc:
+        2d array, per row 3 entries per fish, [linear movement, angulare movement, turn movement]:
+        [
+            [fish1_lin, fish1_ang, fish1_trn, fish2_lin, fish2_ang, fish2_trn, ...]
+            [fish1_lin, fish1_ang, fish1_trn, fish2_lin, fish2_ang, fish2_trn, ...]
+            ...
+        ]
+    startpoints:
+        1d array, 2 entries per fish: [fish1_x, fish1_y, ...]
+    """
+    row, col = loc.shape
+    assert col % 3 == 0
+    nfish = col // 3
+    assert len(startpoints) / nfish == 2
+
+    out = np.empty([col + 1,nfish * 2])
+    out[0] = startpoints
+
+    # Separate turn and other velocities, as they are shifted by one
+    inds = [3 * x + 2 for x in range(nfish)]
+    locT = loc[:,inds]
+    locT = np.insert( locT, 0, np.array( [0.0] * nfish), 0 )
+    inds = [x for x in range(col) if (x % 3) == 1 or (x % 3) == 0]
+    loc = loc[:,inds]
+
+    row_l2c( loc[0] , out[0], locT[0] )
+
+    for i in range(1, row + 1):
+        pass
+
+
+
+
 def main():
-    # file = "data/sleap_1_diff4.h5"
+    file = "data/sleap_1_diff4.h5"
 
-    # temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])
+    temp = extract_coordinates(file, [b'center'], fish_to_extract=[0,1,2])
 
+    print(temp[0])
+    print(temp[1])
     # #remove rows with Nans in it
     # temp = temp[~np.isnan(temp).any(axis=1)]
 
@@ -103,9 +190,10 @@ def main():
 
     # get locomotion
     df = pd.read_csv("data/locomotion_data_diff4.csv", sep = ";")
-    loco = df.to_numpy()
+    loc = df.to_numpy()
 
-    convertLocmotionToBin(loco, "data/clusters.txt", "data/locomotion_data_bin_diff4.csv")
+    convertLocomotionToCoordinates( loc, [223.4468689, 499.31707764, 327.28710938, 512.76531982, 234.62036133, 553.91589355] )
+
 
 
 if __name__ == "__main__":
