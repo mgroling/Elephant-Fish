@@ -1,14 +1,13 @@
 # File to analyse the results
 # Copied from Moritz Maxeiner Masterthesis: https://git.imp.fu-berlin.de/bioroboticslab/robofish/ai
 
-import reader
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from functions import *
 from sklearn.cluster import KMeans
 import pandas as pd
 import numpy as np
+import collections
+import matplotlib.pyplot as plt
 
+from functions import *
 
 def normalize_series(x):
     """
@@ -50,93 +49,10 @@ def calc_follow(a, b):
     return (a_v * b_p).sum(axis=-1)
 
 
-def plot_follow(tracks, file = "figures/follow.png", max_tolerated_movement=20):
-    """
-    Create and save Follow graph, only use center nodes for it
-    count_bins is the number bins
-    """
-    assert tracks.shape[-1] % 2 == 0
-    nfish = int(tracks.shape[-1] / 2)
-
-    follow = []
-    # for every fish combination calculate the follow
-    for i1 in range(nfish):
-        for i2 in range(i1 + 1, nfish):
-            f1_x, f1_y = get_indices(i1)
-            f2_x, f2_y = get_indices(i2)
-            follow.append(calc_follow(tracks[:, f1_x:f1_y + 1], tracks[:, f2_x:f2_y + 1]))
-
-    follow = np.concatenate(follow, axis=0)
-
-    # Create bins for bars
-    bins_pos = [x + 0.5 for x in range(0, max_tolerated_movement)] + [max_tolerated_movement]
-    bins_neg = [x * -1 for x in reversed(bins_pos)]
-    bins = bins_neg + bins_pos
-    # Create labels
-    labels = list(range(-max_tolerated_movement, max_tolerated_movement + 1))
-    valsToPlot = np.histogram(follow, bins=bins)[0]
-    # Set up plot
-    y_pos = np.arange(len(valsToPlot))
-
-    plt.bar(y_pos, valsToPlot)
-    plt.xticks(y_pos, labels)
-
-    plt.plot()
-    return plt.gcf()
-
-
-
-def plot_locomotion(paths, path_to_save, round):
+def getClusters(paths, path_to_save, count_clusters = (20, 20, 20), verbose = False):
     """
     paths should be iterable
     path_to_save is the folder in which it will be saved
-    round will round to one decimal place (round = 2 -> all values will be of the form x.yz)
-    Creates Bar Plots for the Dataframes, one for linear_movement and for angle_radians
-    """
-    #right now it thinks that 0 and 2*pi are not the same for pos and ori, maybe find a solution for it
-    df_list = []
-    for path in paths:
-        df_list.append(pd.read_csv(path, sep = ";"))
-    df_all = pd.concat(df_list)
-    #round values
-    df_all = df_all.round(round)
-
-    #get all linear_movement columns respectivly all angle columns
-    mov_cols = [col for col in df_all.columns if "linear_movement" in col]
-    ang_pos_cols = [col for col in df_all.columns if "angle_new_pos" in col]
-    ang_ori_cols = [col for col in df_all.columns if "angle_change_orientation" in col]
-
-    #melt linear_movement columns together in one
-    df_temp = df_all[mov_cols].melt(var_name = "columns", value_name = "value")
-    #count the values and plot it
-    ax = df_temp["value"].value_counts().sort_index().plot.bar()
-    for i, t in enumerate(ax.get_xticklabels()):
-        if (i % 2) != 0:
-            t.set_visible(False)
-    fig = ax.get_figure()
-    fig.set_size_inches(25, 12.5)
-    fig.savefig(path_to_save + "plot_linear_movement.png")
-
-    df_temp = df_all[ang_pos_cols].melt(var_name = "columns", value_name = "value")
-    ax = df_temp["value"].value_counts().sort_index().plot.bar()
-    for i, t in enumerate(ax.get_xticklabels()):
-        if (i % 2) != 0:
-            t.set_visible(True)
-    fig = ax.get_figure()
-    fig.set_size_inches(25, 12.5)
-    fig.savefig(path_to_save + "plot_angle_new_pos.png")
-
-    df_temp = df_all[ang_ori_cols].melt(var_name = "columns", value_name = "value")
-    ax = df_temp["value"].value_counts().sort_index().plot.bar()
-    fig = ax.get_figure()
-    fig.set_size_inches(25, 12.5)
-    fig.savefig(path_to_save + "plot_angle_change_orientation.png")
-
-def getClusters(paths, path_to_save, count_clusters = (20, 20, 20)):
-    """
-    paths should be iterable
-    path_to_save is the folder in which it will be saved
-    round will round to one decimal place (round = 2 -> all values will be of the form x.yz)
     Finds cluster centers for the dataframes (for mov, pos, ori) (count_clusters should be a tuple with (count_clusters_mov, count_clusters_pos, count_clusters_ori)) and saves these clusters
     """
     #right now it thinks that 0 and 2*pi are not the same for pos and ori, maybe find a solution for it
@@ -154,9 +70,64 @@ def getClusters(paths, path_to_save, count_clusters = (20, 20, 20)):
     df_pos = df_all[ang_pos_cols].melt(var_name = "columns", value_name = "value")
     df_ori = df_all[ang_ori_cols].melt(var_name = "columns", value_name = "value")
 
+    df_pos["value"] = convertRadiansRange(df_pos["value"].to_numpy())
+    df_ori["value"] = convertRadiansRange(df_ori["value"].to_numpy())
+
     kmeans_mov = KMeans(n_clusters = count_clusters[0]).fit(df_mov["value"].to_numpy().reshape(-1, 1))
     kmeans_pos = KMeans(n_clusters = count_clusters[1]).fit(df_pos["value"].to_numpy().reshape(-1, 1))
     kmeans_ori = KMeans(n_clusters = count_clusters[2]).fit(df_ori["value"].to_numpy().reshape(-1, 1))
+
+    if verbose == True:
+        freq_mov = collections.Counter(kmeans_mov.labels_)
+        centers = kmeans_mov.cluster_centers_
+        x, y = zip(*freq_mov.items())
+        x, y = list(x), list(y)
+        for i in range(0, len(x)):
+            x[i] = float(centers[x[i]])
+        temp_1 = [X for _,X in sorted(zip(x,y))]
+        temp_2 = [Y for Y,_ in sorted(zip(x,y))]
+        plt.figure(figsize = (24, 16))
+        ax = plt.bar(np.arange(count_clusters[0]), temp_1)
+        plt.title("Elements per cluster for linear movement", fontsize = 30)
+        plt.xlabel("clusters", fontsize = 30)
+        plt.ylabel("count elements", fontsize = 30)
+        plt.xticks(np.arange(count_clusters[0]), np.round(temp_2, 3))
+        plt.savefig("figures/mov_elems_per_cluster_" + str(count_clusters[0]))
+        plt.clf()
+
+        freq_pos = collections.Counter(kmeans_pos.labels_)
+        centers = kmeans_pos.cluster_centers_
+        x, y = zip(*freq_pos.items())
+        x, y = list(x), list(y)
+        for i in range(0, len(x)):
+            x[i] = float(centers[x[i]])
+        temp_1 = [X for _,X in sorted(zip(x,y))]
+        temp_2 = [Y for Y,_ in sorted(zip(x,y))]
+        plt.figure(figsize = (24, 16))
+        ax = plt.bar(np.arange(count_clusters[0]), temp_1)
+        plt.title("Elements per cluster for change in position (radians)", fontsize = 30)
+        plt.xlabel("clusters", fontsize = 30)
+        plt.ylabel("count elements", fontsize = 30)
+        plt.xticks(np.arange(count_clusters[0]), np.round(temp_2, 3))
+        plt.savefig("figures/pos_elems_per_cluster_" + str(count_clusters[0]))
+        plt.clf()
+
+        freq_ori = collections.Counter(kmeans_ori.labels_)
+        centers = kmeans_ori.cluster_centers_
+        x, y = zip(*freq_ori.items())
+        x, y = list(x), list(y)
+        for i in range(0, len(x)):
+            x[i] = float(centers[x[i]])
+        temp_1 = [X for _,X in sorted(zip(x,y))]
+        temp_2 = [Y for Y,_ in sorted(zip(x,y))]
+        plt.figure(figsize = (24, 16))
+        ax = plt.bar(np.arange(count_clusters[0]), temp_1)
+        plt.title("Elements per cluster for change in orientation (radians)", fontsize = 30)
+        plt.xlabel("clusters", fontsize = 30)
+        plt.ylabel("count elements", fontsize = 30)
+        plt.xticks(np.arange(count_clusters[0]), np.round(temp_2, 3))
+        plt.savefig("figures/ori_elems_per_cluster_" + str(count_clusters[0]))
+        plt.clf()
 
     with open(path_to_save + "clusters.txt", "w+") as f:
         f.write("count_clusters(mov, pos, ori)\n" + str(count_clusters) + "\n")
@@ -167,91 +138,6 @@ def getClusters(paths, path_to_save, count_clusters = (20, 20, 20)):
         for elem in kmeans_ori.cluster_centers_:
             f.write(str(float(elem)) +"\n")
 
-def save_figure(fig, path = "figures/latest_plot.png", size = (25, 12.5)):
-    """
-    Saves the given figure in path with certain size
-    """
-    x, y = size
-    fig.set_size_inches(x, y)
-    fig.savefig(path)
-    plt.close(fig)
-
-
-def plot_positions(track, track2 = None):
-
-    frames, positions = track.shape
-
-    assert positions % 2 == 0
-
-    i_x = list(range(0,positions,2))
-    i_y = list(range(1,positions,2))
-
-    fig = plt.figure()
-
-    def update_points(n, track, points):
-        points.set_xdata(track[n,i_x])
-        points.set_ydata(track[n,i_y])
-
-    def update_points2(n, track, track2, points, points2):
-        points.set_xdata(track[n,i_x])
-        points.set_ydata(track[n,i_y])
-        points2.set_xdata(track2[n,i_x])
-        points2.set_ydata(track2[n,i_y])
-
-    plt.xlim(0, 960)
-    plt.ylim(9,720)
-
-    points, = plt.plot([], [], 'r.')
-    if track2 is None:
-        point_animation = animation.FuncAnimation(fig, update_points, track.shape[0],fargs=(track, points), interval=10)
-    else:
-        points2, = plt.plot([], [], 'b.')
-        point_animation = animation.FuncAnimation(fig, update_points2, track.shape[0],fargs=(track, track2, points, points2), interval=10)
-
-    plt.show()
-
-
-def main():
-    file = "data/sleap_1_Diffgroup1-1.h5"
-    # fish1 = reader.extract_coordinates(file, [b'center'], [0])
-    # fish2 = reader.extract_coordinates(file, [b'center'], [1])
-    tracks = reader.extract_coordinates(file, [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'], [0,1,2])
-    tracks2 = reader.extract_coordinates(file, [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'], [0,1,2], interpolate_nans=False, interpolate_outlier=False)
-
-    fig = plot_follow(tracks)
-    save_figure(fig)
-    # plot_positions(tracks, tracks2)
-
-
 if __name__ == "__main__":
-    main()
-
-
-def loc_to_coord(oldpos, locomotion):
-    """
-    Gets oldposition and locomotion to return the new position coordinates
-    Assumes this is data for one fish only
-    """
-def convertToCoordinates(locomotion, startpoints):
-    """
-    Input:
-    locomotion: For every node the angular
-    startpoints: Startpoints for each fish in locomotion, amounts need to match
-    Output: Coordinates
-    [lin, ang, turn, dis??]
-    """
-    assert locomotion.shape[-1] % len(startpoints) == 0
-    assert locomotion.shape[-1] // 3 == len(startpoints)
-    assert locomotion.shape[-1] % 2 == 0
-    assert len(locomotion) > 0
-    assert startpoints is not None
-
-    nfish = len(startpoints)
-    nnodes = locomotion.shape[-1] // nfish
-    nrows = locomotion.shape[0] + 1
-
-    track = np.empty([nrows,nnodes * nfish])
-    track[0] = startpoints
-
-    for r in len(1, rows):
-        track[r] = newrow
+    paths = ["data/locomotion_data_diff1.csv", "data/locomotion_data_diff2.csv", "data/locomotion_data_diff3.csv", "data/locomotion_data_diff4.csv"]
+    getClusters(paths, "data/", (20,20,20), verbose = True)
