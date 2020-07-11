@@ -191,7 +191,7 @@ def plot_velocities(tracks):
     assert tracks.shape[-1] % 4 == 0
     nfish = int(tracks.shape[-1] / 4)
 
-    locs = locomotion.getLocomotion(tracks, None, False)
+    locs = locomotion.getLocomotion(tracks, None)
 
     # Get dem indices
     i_lin = [x * 3 for x in range(nfish)]

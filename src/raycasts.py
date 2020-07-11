@@ -139,14 +139,14 @@ def main():
 
     ray = Raycast(our_wall_lines, COUNT_BINS_AGENTS, WALL_RAYS_WALLS, RADIUS_FIELD_OF_VIEW_AGENTS, RADIUS_FIELD_OF_VIEW_WALLS, MAX_VIEW_RANGE, COUNT_FISHES)
 
-    file = "data/sleap_1_diff2.h5"
+    file = "data/sleap_1_same5.h5"
 
-    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])[:]
+    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])
 
     print("shape:",temp.shape)
 
     #get rays and save them
-    ray.getRays(temp , "data/raycast_data_diff2.csv")
+    ray.getRays(temp , "data/raycast_data_same5.csv")
 
 if __name__ == "__main__":
     main()
