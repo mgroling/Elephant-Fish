@@ -67,7 +67,7 @@ def convertLocmotionToBin(path, path_to_save, clusters_path, probabilities = Tru
             prob_mov = np.append(np.array([["Fish_" + str(i) + "_prob_mov_bin_" + str(j) for j in range(0, len(clusters_mov))]]), softmax(dist_mov), axis = 0)
             prob_pos = np.append(np.array([["Fish_" + str(i) + "_prob_pos_bin_" + str(j) for j in range(0, len(clusters_pos))]]), softmax(dist_pos), axis = 0)
             prob_ori = np.append(np.array([["Fish_" + str(i) + "_prob_ori_bin_" + str(j) for j in range(0, len(clusters_ori))]]), softmax(dist_ori), axis = 0)
-            
+
             temp = np.append(np.append(prob_mov, prob_pos, axis = 1), prob_ori, axis = 1)
             if i == 0:
                 result = temp
@@ -76,7 +76,7 @@ def convertLocmotionToBin(path, path_to_save, clusters_path, probabilities = Tru
         else:
             #todo
             pass
-    
+
     #save it
     df = pd.DataFrame(data = result[1:], columns = result[0])
     df.to_csv(path_to_save, sep = ";")
@@ -91,9 +91,9 @@ def distancesToClusters(points, clusters):
         temp = np.abs(points - float(clusters[j])).reshape(-1, 1)
         if j == 0:
             distances = temp
-        else: 
+        else:
             distances = np.append(distances, temp, axis = 1)
-    
+
     return distances
 
 def softmax(np_array):
@@ -104,13 +104,9 @@ def softmax(np_array):
     return np.divide(temp, np.sum(temp, axis = 1).reshape(-1, 1))
 
 def main():
-<<<<<<< HEAD
-    file = "data/sleap_1_diff1.h5"
-=======
     # file = "data/sleap_1_Diffgroup1-1.h5"
 
     # temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])
->>>>>>> master
 
     # #remove rows with Nans in it
     # temp = temp[~np.isnan(temp).any(axis=1)]

@@ -212,7 +212,6 @@ def plot_positions(track, track2 = None):
 
 
 def main():
-<<<<<<< HEAD
     file = "data/sleap_1_Diffgroup1-1.h5"
     # fish1 = reader.extract_coordinates(file, [b'center'], [0])
     # fish2 = reader.extract_coordinates(file, [b'center'], [1])
@@ -222,16 +221,37 @@ def main():
     fig = plot_follow(tracks)
     save_figure(fig)
     # plot_positions(tracks, tracks2)
-=======
-    # file = "data/sleap_1_Diffgroup1-1.h5"
-    # fish1 = reader.extract_coordinates(file, [b'center'], [0])
-    # fish2 = reader.extract_coordinates(file, [b'center'], [1])
-    # tracks = reader.extract_coordinates(file, [b'center'], [0,1,2])
 
-    # plot_follow(tracks)
->>>>>>> master
-
-    getClusters(["data/locomotion_data.csv"], "data/", (15, 20, 17))
 
 if __name__ == "__main__":
     main()
+
+
+def loc_to_coord(oldpos, locomotion):
+    """
+    Gets oldposition and locomotion to return the new position coordinates
+    Assumes this is data for one fish only
+    """
+def convertToCoordinates(locomotion, startpoints):
+    """
+    Input:
+    locomotion: For every node the angular
+    startpoints: Startpoints for each fish in locomotion, amounts need to match
+    Output: Coordinates
+    [lin, ang, turn, dis??]
+    """
+    assert locomotion.shape[-1] % len(startpoints) == 0
+    assert locomotion.shape[-1] // 3 == len(startpoints)
+    assert locomotion.shape[-1] % 2 == 0
+    assert len(locomotion) > 0
+    assert startpoints is not None
+
+    nfish = len(startpoints)
+    nnodes = locomotion.shape[-1] // nfish
+    nrows = locomotion.shape[0] + 1
+
+    track = np.empty([nrows,nnodes * nfish])
+    track[0] = startpoints
+
+    for r in len(1, rows):
+        track[r] = newrow

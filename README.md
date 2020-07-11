@@ -29,12 +29,19 @@ diff_1: entire video
 diff_2: entire video
 diff_3: frame 0 - 17000
 diff_4: frame 120 - end
-diff_5: let's see
+diff_5: not used
+same_1: entire video
+same_2: not used
+same_3: frame 130 - end
+same_4: entire video
+same_5:
 ```
 
-## Possible improvements
+Best labels on: same_2
 
-Not done since videos are not focus
+## Future improvements
+
+Improvements we did not invest time in, since the data retrieval was not the main focus of this software project.
 
 * More training on data in sleap (probably 200 - 600 frames more), specifically for edge cases
 * Better interpolation method:
