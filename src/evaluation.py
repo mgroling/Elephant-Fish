@@ -180,7 +180,7 @@ def plot_tankpositions(tracks):
     return fig
 
 
-def plot_velocities(tracks):
+def plot_velocities( tracks, clusterfile = None ):
     """
     Plots the velocities
     Expects two nodes per fish exactly: tracks: [head1_x, head1_y, center1_x, center1_y, head2_x, head2_y, center2_x, center2_y,...]
@@ -190,6 +190,9 @@ def plot_velocities(tracks):
 
     assert tracks.shape[-1] % 4 == 0
     nfish = int(tracks.shape[-1] / 4)
+
+    if clusterfile is not None:
+        cLin, cAng, cOri = readClusters( clusterfile )
 
     locs = locomotion.getLocomotion(tracks, None)
 
@@ -211,17 +214,23 @@ def plot_velocities(tracks):
     fig_angular, ax = plt.subplots(figsize=(18, 18))
     fig_angular.subplots_adjust(top=0.93)
     ax.set_xlim(-np.pi, np.pi)
-    seaborn.distplot(pd.Series(angular_velocities, name="Angular velocities"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
+    seaborn.distplot(pd.Series(angular_velocities, name="Angular movement"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
+    if clusterfile is not None:
+        seaborn.rugplot(cAng, height=0.03, ax=ax, color="r", linewidth=3)
 
     fig_turn, ax = plt.subplots(figsize=(18, 18))
     fig_turn.subplots_adjust(top=0.93)
     ax.set_xlim(-np.pi, np.pi)
-    seaborn.distplot(pd.Series(turn_velocities, name="Turning velocities"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
+    seaborn.distplot(pd.Series(turn_velocities, name="Orientational movement"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
+    if clusterfile is not None:
+        seaborn.rugplot(cOri, height=0.03, ax=ax, color="r", linewidth=3)
 
     fig_linear, ax = plt.subplots(figsize=(18, 18))
     fig_linear.subplots_adjust(top=0.93)
     ax.set_xlim(-20, 20)
-    seaborn.distplot(pd.Series(linear_velocities, name="Linear velocities"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
+    seaborn.distplot(pd.Series(linear_velocities, name="Linear movement"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
+    if clusterfile is not None:
+        seaborn.rugplot(cLin, height=0.03, ax=ax, color="r", linewidth=3, name="test")
 
     return fig_linear, fig_angular, fig_turn
 
@@ -281,7 +290,7 @@ def plot_trajectories(tracks, world=(960,720)):
     return fig
 
 
-def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), tau_seconds=(0.3, 1.3) ):
+def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), tau_seconds=(0.3, 1.3), clusterfile = "data/clusters.txt" ):
     """
     For given tracks create all plots in given path
     tracks only is allowed to include one node per fish!
@@ -313,10 +322,10 @@ def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), t
     save_figure(plot_tlvc_iid(tracksCenter, time_step, tau_seconds), path=(path + "tlvc_iid.png"))
     save_figure(plot_tankpositions(tracksCenter), path=(path + "tankpostions.png"), size=(24,18))
     # Velocities
-    lin,ang,trn = plot_velocities(tracks)
-    save_figure(lin, path=(path + "velocities_linear.png") , size=(18, 18))
-    save_figure(ang, path=(path + "velocities_angular.png") , size=(18, 18))
-    save_figure(trn, path=(path + "velocities_trn.png") , size=(18, 18))
+    lin,ang,trn = plot_velocities(tracks, clusterfile=clusterfile)
+    save_figure(lin, path=(path + "locomotion_linear.png") , size=(18, 18))
+    save_figure(ang, path=(path + "locomotion_angular.png") , size=(18, 18))
+    save_figure(trn, path=(path + "locomotion_trn.png") , size=(18, 18))
     # Trajectories
     save_figure(plot_trajectories(tracksCenter), path=(path + "trajectories_all.png"), size=(24,18))
     # Print trajectories for each fish
