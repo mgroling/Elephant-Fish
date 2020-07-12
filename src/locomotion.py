@@ -86,12 +86,14 @@ def convertLocmotionToBin(loco, clusters_path, path_to_save = None, probabilitie
 def main():
     file = "data/sleap_1_diff2.h5"
 
-    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])[:]
+    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])[0:2, 0:4]
+
+    print(temp)
 
     print("shape:",temp.shape)
 
     #get locomotion and save it
-    getLocomotion(temp, "data/locomotion_data_diff2.csv")
+    # getLocomotion(temp, "data/locomotion_data_diff2.csv")
 
     # get locomotion
     # df = pd.read_csv("data/locomotion_data_diff4.csv", sep = ";")
