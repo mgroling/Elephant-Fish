@@ -459,7 +459,7 @@ def create_all_plots_together( path="figures/together", clusterfile = "data/clus
     print( "tankpositions" )
     save_figure( plot_tankpositions( [tracks1c, tracks2c, tracks3c, tracks4c, tracks5c, tracks6c, tracks7c, tracks8c], multipletracksets=True ), path=(path + "tankpositions.png" ), size=(24,18) )
     print( "movements/velocities/locomotions")
-    lin, ang, ori = plot_velocities( [tracks1, tracks2, tracks3, tracks4, tracks5, tracks6, tracks7, tracks8], multipletracksets=True )
+    lin, ang, ori = plot_velocities( [tracks1, tracks2, tracks3, tracks4, tracks5, tracks6, tracks7, tracks8], clusterfile=clusterfile, multipletracksets=True )
     #lin, ang, ori = plot_velocities( [tracks, tracks2], multipletracksets=True )
     save_figure( lin, path=(path + "locomotion_linear.png" ), size=(18, 18) )
     save_figure( ang, path=(path + "locomotion_angular.png" ), size=(18, 18) )
