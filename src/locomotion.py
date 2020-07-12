@@ -84,7 +84,7 @@ def convertLocmotionToBin(loco, clusters_path, path_to_save = None, probabilitie
         df.to_csv(path_to_save, sep = ";")
 
 
-def row_l2c( locs, coords, trns ):
+def row_l2c( locs, coords ):
     """
     Returns 1d ndarray with new coordinates based on previos coordinades and given locs
     """
@@ -92,26 +92,24 @@ def row_l2c( locs, coords, trns ):
 
     out = np.array( coords )
 
-    for f in range(nfish):
-        ix, iy = get_indices( f )
-        x = coords[ix]
-        y = coords[iy]
-        lin = locs[2 * f]
-        ang = locs[2 * f + 1]
+    # for f in range(nfish):
+    #     ix, iy = get_indices( f )
+    #     x = coords[ix]
+    #     y = coords[iy]
+    #     lin = locs[2 * f]
+    #     ang = locs[2 * f + 1]
 
-        nang = (ang + trns[f]) % 2*np.pi
+    #     nang = (ang + trns[f]) % 2*np.pi
 
-        # Polar to kartesian
-        vx = math.cos( nang ) * lin
-        vy = math.sin( nang ) * lin
+    #     # Polar to kartesian
+    #     vx = math.cos( nang ) * lin
+    #     vy = math.sin( nang ) * lin
 
-
-
-    # alternative
-    xs = [2 * x for x in range(nfish)]
-    ys = [2 * x + 1 for x in range(nfish)]
-    lins = np.abs( locs[[2 * x for x in range(nfish)]] )
-    angs = locs[[2 * x + 1 for x in range(nfish)]]
+    xs = [4 * x for x in range(nfish)]
+    ys = [4 * x + 1 for x in range(nfish)]
+    lins = np.abs( locs[[3 * x for x in range(nfish)]] )
+    angs = locs[[3 * x + 1 for x in range(nfish)]]
+    trns = locs[[3 * x + 2 for x in range(nfish)]]
     nangs = (angs + trns) % ( 2 * np.pi )
     print( "lins ", lins )
     print( "angs ", angs )
@@ -147,24 +145,25 @@ def convertLocomotionToCoordinates( loc, startpoints ):
             ...
         ]
     startpoints:
-        1d array, 2 entries per fish: [fish1_x, fish1_y, ...]
+        two nodes per fish exactly:
+        [head1_x, head1_y, center1_x, center1_y, head2_x, head2_y, center2_x, center2_y,...]
     """
     row, col = loc.shape
     assert col % 3 == 0
     nfish = col // 3
-    assert len(startpoints) / nfish == 2
+    assert len(startpoints) / nfish == 4
 
-    out = np.empty([col + 1,nfish * 2])
+    out = np.empty([col + 1,nfish * 4])
     out[0] = startpoints
 
-    # Separate turn and other velocities, as they are shifted by one
-    inds = [3 * x + 2 for x in range(nfish)]
-    locT = loc[:,inds]
-    locT = np.insert( locT, 0, np.array( [0.0] * nfish), 0 )
-    inds = [x for x in range(col) if (x % 3) == 1 or (x % 3) == 0]
-    loc = loc[:,inds]
+    # # Separate turn and other velocities, as they are shifted by one
+    # inds = [3 * x + 2 for x in range(nfish)]
+    # locT = loc[:,inds]
+    # locT = np.insert( locT, 0, np.array( [0.0] * nfish), 0 )
+    # inds = [x for x in range(col) if (x % 3) == 1 or (x % 3) == 0]
+    # loc = loc[:,inds]
 
-    row_l2c( loc[0] , out[0], locT[1] )
+    row_l2c( loc[0] , out[0] )
 
     for i in range(1, row + 1):
         pass
