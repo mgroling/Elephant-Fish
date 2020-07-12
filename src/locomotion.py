@@ -84,52 +84,43 @@ def convertLocmotionToBin(loco, clusters_path, path_to_save = None, probabilitie
         df.to_csv(path_to_save, sep = ";")
 
 
-def row_l2c( locs, coords ):
+def row_l2c( coords, locs ):
     """
     Returns 1d ndarray with new coordinates based on previos coordinades and given locs
     """
-    nfish = len(coords) // 2
+    nfish = len(coords) // 3
 
-    out = np.array( coords )
+    print( "coords: ", coords )
+    print( "locs  : ", locs )
 
-    # for f in range(nfish):
-    #     ix, iy = get_indices( f )
-    #     x = coords[ix]
-    #     y = coords[iy]
-    #     lin = locs[2 * f]
-    #     ang = locs[2 * f + 1]
+    # Indices
+    # coords
+    xs = [3 * x for x in range(nfish)]
+    ys = [3 * x + 1 for x in range(nfish)]
+    os = [3 * x + 2 for x in range(nfish)]
+    # locs
+    lin = [3 * x for x in range(nfish)]
+    ang = [3 * x + 1 for x in range(nfish)]
+    ori = [3 * x + 2 for x in range(nfish)]
 
-    #     nang = (ang + trns[f]) % 2*np.pi
+    new_angles = coords[os] + locs[ang]
 
-    #     # Polar to kartesian
-    #     vx = math.cos( nang ) * lin
-    #     vy = math.sin( nang ) * lin
+    # print( "orientations ", coords[os] )
+    # print( "lins ", locs[lin] )
+    # print( "angs ", locs[ang] )
+    # # print( "trns ", trns )
+    # print( "new_angles ", new_angles )
+    xvals = np.cos( new_angles ) * locs[lin]
+    yvals = np.sin( new_angles ) * locs[lin]
 
-    xs = [4 * x for x in range(nfish)]
-    ys = [4 * x + 1 for x in range(nfish)]
-    lins = np.abs( locs[[3 * x for x in range(nfish)]] )
-    angs = locs[[3 * x + 1 for x in range(nfish)]]
-    trns = locs[[3 * x + 2 for x in range(nfish)]]
-    nangs = (angs + trns) % ( 2 * np.pi )
-    print( "lins ", lins )
-    print( "angs ", angs )
-    print( "trns ", trns )
-    print( "nangs ", nangs )
-    xvals = np.cos( nangs ) * lins
-    yvals = np.sin( nangs ) * lins
+    out = np.empty( coords.shape )
 
-    print(xvals)
-    print(yvals)
-
-    print(out)
-    t = out.copy()
-
-    out[xs] = out[xs] + yvals
-    out[ys] = out[ys] + xvals
+    out[xs] = coords[xs] - yvals
+    out[ys] = coords[ys] - xvals
 
     print(out)
 
-    print( getDistance(t[0], t[1], out[0], out[1]) )
+    print( getDistance(coords[0], coords[1], out[0], out[1]) )
 
 
 
@@ -149,21 +140,23 @@ def convertLocomotionToCoordinates( loc, startpoints ):
         [head1_x, head1_y, center1_x, center1_y, head2_x, head2_y, center2_x, center2_y,...]
     """
     row, col = loc.shape
+    assert row > 1
     assert col % 3 == 0
     nfish = col // 3
     assert len(startpoints) / nfish == 4
 
-    out = np.empty([col + 1,nfish * 4])
-    out[0] = startpoints
+    # save [center1_x, center2_y, orientation1, center2_x, ...] for every fish
+    out = np.empty([col + 1,nfish * 3])
 
-    # # Separate turn and other velocities, as they are shifted by one
-    # inds = [3 * x + 2 for x in range(nfish)]
-    # locT = loc[:,inds]
-    # locT = np.insert( locT, 0, np.array( [0.0] * nfish), 0 )
-    # inds = [x for x in range(col) if (x % 3) == 1 or (x % 3) == 0]
-    # loc = loc[:,inds]
+    # 1. Distances Center - Head, out setup
+    disCH = []
+    for f in range(nfish):
+        disCH.append( getDistance( startpoints[4 * f], startpoints[4 * f + 1], startpoints[4 * f + 2], startpoints[4 * f + 3] ) )
+        out[0,3 * f] = startpoints[4 * f + 2]
+        out[0,3 * f + 1] = startpoints[4 * f + 3]
+        out[0,3 * f + 2] = getAngle( (startpoints[4 * f], startpoints[4 * f + 1],), (startpoints[4 * f + 2], startpoints[4 * f + 3],), "radians" )
 
-    row_l2c( loc[0] , out[0] )
+    row_l2c( out[0], loc[0] )
 
     for i in range(1, row + 1):
         pass
@@ -174,18 +167,17 @@ def convertLocomotionToCoordinates( loc, startpoints ):
 def main():
     file = "data/sleap_1_diff2.h5"
 
-    temp = extract_coordinates(file, [b'head'], fish_to_extract=[0,1,2])
+    temp = extract_coordinates(file, [b'head',b'center'], fish_to_extract=[0,1,2])
 
     print(temp[0])
     print(temp[1])
-    print( getDistance(temp[0,0], temp[0,1], temp[1,0], temp[1,1]) )
+    print( getDistance(temp[0,2], temp[0,3], temp[1,2], temp[1,3]) )
 
     # get locomotion
     df = pd.read_csv("data/locomotion_data_diff2.csv", sep = ";")
     loc = df.to_numpy()
-    print("loc 0: ", loc[0])
 
-    convertLocomotionToCoordinates( loc, [282.05801392, 85.2730484, 396.72821045, 223.87356567, 345.84439087, 438.7845459] )
+    convertLocomotionToCoordinates( loc, [282.05801392, 85.2730484, 278.16235352, 112.26922607, 396.72821045, 223.87356567, 388.54510498, 198.40411377, 345.84439087, 438.7845459, 325.3197937, 426.67755127] )
 
 
     # convertLocmotionToBin(loco, "data/clusters.txt", "data/locomotion_data_bin_diff4.csv")
