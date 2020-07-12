@@ -90,8 +90,8 @@ def row_l2c( coords, locs ):
     """
     nfish = len(coords) // 3
 
-    print( "coords: ", coords )
-    print( "locs  : ", locs )
+    # print( "coords: ", coords )
+    # print( "locs  : ", locs )
 
     # Indices
     # coords
@@ -103,7 +103,7 @@ def row_l2c( coords, locs ):
     ang = [3 * x + 1 for x in range(nfish)]
     ori = [3 * x + 2 for x in range(nfish)]
 
-    new_angles = coords[os] + locs[ang]
+    new_angles = ( coords[os] + locs[ang] ) % ( np.pi * 2 )
 
     # print( "orientations ", coords[os] )
     # print( "lins ", locs[lin] )
@@ -118,9 +118,11 @@ def row_l2c( coords, locs ):
     out[xs] = coords[xs] - yvals
     out[ys] = coords[ys] - xvals
 
-    print(out)
+    # print(out)
 
-    print( getDistance(coords[0], coords[1], out[0], out[1]) )
+    # print( getDistance(coords[0], coords[1], out[0], out[1]) )
+    out[os] = ( coords[os] + locs[ori] ) % ( np.pi * 2 )
+    return out
 
 
 
@@ -146,7 +148,7 @@ def convertLocomotionToCoordinates( loc, startpoints ):
     assert len(startpoints) / nfish == 4
 
     # save [center1_x, center2_y, orientation1, center2_x, ...] for every fish
-    out = np.empty([col + 1,nfish * 3])
+    out = np.empty([row + 1,nfish * 3])
 
     # 1. Distances Center - Head, out setup
     disCH = []
@@ -156,10 +158,11 @@ def convertLocomotionToCoordinates( loc, startpoints ):
         out[0,3 * f + 1] = startpoints[4 * f + 3]
         out[0,3 * f + 2] = getAngle( (startpoints[4 * f], startpoints[4 * f + 1],), (startpoints[4 * f + 2], startpoints[4 * f + 3],), "radians" )
 
-    row_l2c( out[0], loc[0] )
+    for i in range(0, row):
+        out[i + 1] = row_l2c( out[i], loc[i] )
 
-    for i in range(1, row + 1):
-        pass
+    print(out)
+    return out
 
 
 
@@ -172,6 +175,7 @@ def main():
     print(temp[0])
     print(temp[1])
     print( getDistance(temp[0,2], temp[0,3], temp[1,2], temp[1,3]) )
+    print(temp[-1])
 
     # get locomotion
     df = pd.read_csv("data/locomotion_data_diff2.csv", sep = ";")
