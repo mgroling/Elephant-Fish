@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import math
-from functions import getAngle, getDistance, readClusters, distancesToClusters, softmax, get_indices
+from functions import getAngle, getDistance, readClusters, distancesToClusters, softmax, get_indices, convPolarToCart
 from itertools import chain
 from reader import *
 from sklearn.cluster import KMeans
@@ -153,13 +153,13 @@ def convLocToCart( loc, startpoints ):
     for i in range(0, row):
         out[i + 1] = row_l2c( out[i], loc[i] )
 
-    return out
+    return convPolarToCart( out, disCH )
 
 
 def main():
     file = "data/sleap_1_diff2.h5"
 
-    temp = extract_coordinates(file, [b'center'], fish_to_extract=[0,1,2])
+    temp = extract_coordinates(file, [b'head',b'center'], fish_to_extract=[0,1,2])
 
     print(temp[0])
     print(temp[1])
@@ -170,7 +170,7 @@ def main():
     df = pd.read_csv("data/locomotion_data_diff2.csv", sep = ";")
     loc = df.to_numpy()
 
-    convertLocomotionToCoordinates( loc, [282.05801392, 85.2730484, 278.16235352, 112.26922607, 396.72821045, 223.87356567, 388.54510498, 198.40411377, 345.84439087, 438.7845459, 325.3197937, 426.67755127] )
+    convLocToCart( loc, [282.05801392, 85.2730484, 278.16235352, 112.26922607, 396.72821045, 223.87356567, 388.54510498, 198.40411377, 345.84439087, 438.7845459, 325.3197937, 426.67755127] )
 
 
     # convertLocmotionToBin(loco, "data/clusters.txt", "data/locomotion_data_bin_diff4.csv")
