@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import math
-from functions import getAngle, getDistance, readClusters, distancesToClusters, softmax
+from functions import getAngle, getDistance, readClusters, distancesToClusters, softmax, get_indices, convPolarToCart
 from itertools import chain
 from reader import *
 from sklearn.cluster import KMeans
@@ -83,19 +83,95 @@ def convertLocmotionToBin(loco, clusters_path, path_to_save = None, probabilitie
         df = pd.DataFrame(data = result[1:], columns = result[0])
         df.to_csv(path_to_save, sep = ";")
 
+
+def row_l2c( coords, locs ):
+    """
+    Returns 1d ndarray with new coordinates based on previos coordinades and given locomotions,
+    Output: [center1_x, center1_y, orientation1, ...]
+    """
+    nfish = len(coords) // 3
+
+    # coords indices
+    xs = [3 * x for x in range(nfish)]
+    ys = [3 * x + 1 for x in range(nfish)]
+    os = [3 * x + 2 for x in range(nfish)]
+    # locs indices
+    lin = [3 * x for x in range(nfish)]
+    ang = [3 * x + 1 for x in range(nfish)]
+    ori = [3 * x + 2 for x in range(nfish)]
+    # computation
+    new_angles = ( coords[os] + locs[ang] ) % ( np.pi * 2 )
+    xvals = np.cos( new_angles ) * np.abs( locs[lin] )
+    yvals = np.sin( new_angles ) * np.abs( locs[lin] )
+    out = np.empty( coords.shape )
+    out[xs] = coords[xs] + xvals
+    out[ys] = coords[ys] + yvals
+    out[os] = ( coords[os] + locs[ori] ) % ( np.pi * 2 )
+    return out
+
+
+def convLocToCart( loc, startpoints ):
+    """
+    Converts locomotion np array to coordinates,
+    assumens first fish "looks" upwards
+    loc:
+        2d array, per row 3 entries per fish, [linear movement, angulare movement, turn movement]:
+        [
+            [fish1_lin, fish1_ang, fish1_trn, fish2_lin, fish2_ang, fish2_trn, ...]
+            [fish1_lin, fish1_ang, fish1_trn, fish2_lin, fish2_ang, fish2_trn, ...]
+            ...
+        ]
+    startpoints:
+        two nodes per fish exactly:
+        [head1_x, head1_y, center1_x, center1_y, head2_x, head2_y, center2_x, center2_y,...]
+    Output:
+
+        [
+            [center1_x, center1_y, orientation1, ...]
+            [center1_x, center1_y, orientation1, ...]
+            ...
+        ]
+    """
+    row, col = loc.shape
+    assert row > 1
+    assert col % 3 == 0
+    nfish = col // 3
+    assert len(startpoints) / nfish == 4
+
+    # save [center1_x, center2_y, orientation1, center2_x, ...] for every fish
+    out = np.empty([row + 1,nfish * 3])
+
+    # 1. Distances Center - Head, out setup
+    disCH = []
+    for f in range(nfish):
+        disCH.append( getDistance( startpoints[4 * f], startpoints[4 * f + 1], startpoints[4 * f + 2], startpoints[4 * f + 3] ) )
+        out[0,3 * f] = startpoints[4 * f + 2]
+        out[0,3 * f + 1] = startpoints[4 * f + 3]
+        # Angle between Fish Orientation and the unit vector
+        out[0,3 * f + 2] = getAngle( (1,0,), (startpoints[4 * f] - startpoints[4 * f + 2], startpoints[4 * f + 1] - startpoints[4 * f + 3],), "radians" )
+
+    for i in range(0, row):
+        out[i + 1] = row_l2c( out[i], loc[i] )
+
+    return convPolarToCart( out, disCH )
+
+
 def main():
     file = "data/sleap_1_diff2.h5"
 
-    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])[:]
+    temp = extract_coordinates(file, [b'head',b'center'], fish_to_extract=[0,1,2])
 
-    print("shape:",temp.shape)
-
-    #get locomotion and save it
-    getLocomotion(temp, "data/locomotion_data_diff2.csv")
+    print(temp[0])
+    print(temp[1])
+    print( getDistance(temp[0,0], temp[0,1], temp[1,0], temp[1,1]) )
+    print(temp[-1])
 
     # get locomotion
-    # df = pd.read_csv("data/locomotion_data_diff4.csv", sep = ";")
-    # loco = df.to_numpy()
+    df = pd.read_csv("data/locomotion_data_diff2.csv", sep = ";")
+    loc = df.to_numpy()
+
+    convLocToCart( loc, [282.05801392, 85.2730484, 278.16235352, 112.26922607, 396.72821045, 223.87356567, 388.54510498, 198.40411377, 345.84439087, 438.7845459, 325.3197937, 426.67755127] )
+
 
     # convertLocmotionToBin(loco, "data/clusters.txt", "data/locomotion_data_bin_diff4.csv")
 

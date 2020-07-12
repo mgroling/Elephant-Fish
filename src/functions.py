@@ -93,7 +93,7 @@ def getAngle(vector1, vector2, mode = "degrees"):
     angle_orth = np.degrees(np.arccos(np.clip(temp_orth, -1, 1)))
 
     #It is on the left side of our vector
-    if angle_orth > 90:
+    if angle_orth < 90:
         angle = 360 - angle
 
     return angle if mode == "degrees" else math.radians(angle)
@@ -194,3 +194,45 @@ def convertRadiansRange(ang_vel):
     """
     ang_vel[ang_vel > np.pi] = ang_vel[ang_vel > np.pi] - 2*np.pi
     return ang_vel
+
+
+def convPolarToCart( polarTracks, distances ):
+    """
+    Input:
+    polarTracks:
+        [
+            [center1_x, center1_y, orientation1, ...]
+            [center1_x, center1_y, orientation1, ...]
+            ...
+        ]
+    distances:
+        [disCH1, disCH2, ...]
+    Output:
+        [
+            [head1_x, head1_y, center1_x, center1_y, ...]
+            [head1_x, head1_y, center1_x, center1_y, ...]
+            ...
+        ]
+    """
+    nfish = len( distances )
+    rows, cols = polarTracks.shape
+    assert cols % nfish == 0
+    assert cols // nfish == 3
+    assert rows >= 1
+
+    out = np.empty( (rows, nfish * 4) )
+
+    # Indices
+    isp_xcenter = [ 3 * x for x in range(nfish) ]
+    isp_ycenter = [ 3 * x + 1 for x in range(nfish) ]
+    iso_xcenter = [ 4 * x + 2 for x in range(nfish) ]
+    iso_ycenter = [ 4 * x + 3 for x in range(nfish) ]
+
+    out[:,iso_xcenter] = polarTracks[:,isp_xcenter]
+    out[:,iso_ycenter] = polarTracks[:,isp_ycenter]
+
+    for f in range(nfish):
+        out[:, 4 * f] = out[:, 4 * f + 2] + np.cos( polarTracks[:, 3 * f + 2] ) * distances[f]
+        out[:, 4 * f + 1] = out[:, 4 * f + 3] + np.sin( polarTracks[:, 3 * f + 2] ) * distances[f]
+
+    return out
