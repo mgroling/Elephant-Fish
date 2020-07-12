@@ -479,14 +479,14 @@ def create_all_plots_separate( clusterfile = "data/clusters.txt" ):
     tracks7 = reader.extract_coordinates( "data/sleap_1_same4.h5", [b'head',b'center'] )
     tracks8 = reader.extract_coordinates( "data/sleap_1_same5.h5", [b'head',b'center'] )
 
-    create_plots( tracks1, clusterfile = "data/clusters.txt" )
-    create_plots( tracks2, clusterfile = "data/clusters.txt" )
-    create_plots( tracks3, clusterfile = "data/clusters.txt" )
-    create_plots( tracks4, clusterfile = "data/clusters.txt" )
-    create_plots( tracks5, clusterfile = "data/clusters.txt" )
-    create_plots( tracks6, clusterfile = "data/clusters.txt" )
-    create_plots( tracks7, clusterfile = "data/clusters.txt" )
-    create_plots( tracks8, clusterfile = "data/clusters.txt" )
+    create_plots( tracks1, path="figures/diff1", clusterfile="data/clusters.txt" )
+    create_plots( tracks2, path="figures/diff2", clusterfile="data/clusters.txt" )
+    create_plots( tracks3, path="figures/diff3", clusterfile="data/clusters.txt" )
+    create_plots( tracks4, path="figures/diff4", clusterfile="data/clusters.txt" )
+    create_plots( tracks5, path="figures/same1", clusterfile="data/clusters.txt" )
+    create_plots( tracks6, path="figures/same3", clusterfile="data/clusters.txt" )
+    create_plots( tracks7, path="figures/same4", clusterfile="data/clusters.txt" )
+    create_plots( tracks8, path="figures/same5", clusterfile="data/clusters.txt" )
 
 
 def save_figure(fig, path = "figures/latest_plot.png", size = (25, 12.5)):
@@ -538,8 +538,8 @@ def animate_positions(track, track2 = None):
 
 def main():
 
-    create_all_plots_together()
-
+    # create_all_plots_together()
+    create_all_plots_separate()
 
 if __name__ == "__main__":
     main()
