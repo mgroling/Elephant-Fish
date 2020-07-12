@@ -168,7 +168,6 @@ def updateLocomotions():
     getLocomotion( extract_coordinates( "data/sleap_1_same4.h5", [b'head',b'center'], fish_to_extract=[0,1,2]), "data/locomotion_data_same4.csv" )
     getLocomotion( extract_coordinates( "data/sleap_1_same5.h5", [b'head',b'center'], fish_to_extract=[0,1,2]), "data/locomotion_data_same5.csv" )
 
-
 def main():
 
     updateLocomotions()

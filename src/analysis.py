@@ -166,21 +166,33 @@ def createAverageDistanceForClusters(paths, count_cluster_min, count_cluster_max
 
     for i in range(count_cluster_min, count_cluster_max+1, count_cluster_step):
         print("||| Now computing for n_clusters = " + str(i) + " |||")
-        kmeans_mov = KMeans(n_clusters = i)
-        kmeans_pos = KMeans(n_clusters = i)
-        kmeans_ori = KMeans(n_clusters = i)
+        y_mov_temp = []
+        y_pos_temp = []
+        y_ori_temp = []
+        for j in range(0, 3):
+            # dist_mov = KMeans(n_clusters = i).fit_transform(df_mov["value"].to_numpy().reshape(-1, 1))
+            # dist_pos = KMeans(n_clusters = i).fit_transform(df_pos["value"].to_numpy().reshape(-1, 1))
+            # dist_ori = KMeans(n_clusters = i).fit_transform(df_ori["value"].to_numpy().reshape(-1, 1))
 
-        kmeans_mov.fit_transform(df_mov["value"].to_numpy().reshape(-1, 1))
-        kmeans_pos.fit_transform(df_pos["value"].to_numpy().reshape(-1, 1))
-        kmeans_ori.fit_transform(df_ori["value"].to_numpy().reshape(-1, 1))
+            # dist_mov = np.mean(dist_mov.min(axis = 1))
+            # dist_pos = np.mean(dist_pos.min(axis = 1))
+            # dist_ori = np.mean(dist_ori.min(axis = 1))
 
-        dist_mov = distortion_score(df_mov["value"].to_numpy().reshape(-1, 1), kmeans_mov.labels_)
-        dist_pos = distortion_score(df_pos["value"].to_numpy().reshape(-1, 1), kmeans_pos.labels_)
-        dist_ori = distortion_score(df_ori["value"].to_numpy().reshape(-1, 1), kmeans_ori.labels_)
+            kmeans_mov = KMeans(n_clusters = i).fit(df_mov["value"].to_numpy().reshape(-1, 1))
+            kmeans_pos = KMeans(n_clusters = i).fit(df_pos["value"].to_numpy().reshape(-1, 1))
+            kmeans_ori = KMeans(n_clusters = i).fit(df_ori["value"].to_numpy().reshape(-1, 1))
 
-        y_mov.append(dist_mov)
-        y_pos.append(dist_pos)
-        y_ori.append(dist_ori)
+            dist_mov = kmeans_mov.inertia_ / len(df_mov.index)
+            dist_pos = kmeans_pos.inertia_ / len(df_pos.index)
+            dist_ori = kmeans_ori.inertia_ / len(df_ori.index)
+
+            y_mov_temp.append(dist_mov)
+            y_pos_temp.append(dist_pos)
+            y_ori_temp.append(dist_ori)
+
+        y_mov.append(np.mean(np.array(y_mov_temp)))
+        y_pos.append(np.mean(np.array(y_pos_temp)))
+        y_ori.append(np.mean(np.array(y_ori_temp)))
         x.append(i)
 
     return x, y_mov, y_pos, y_ori
@@ -192,18 +204,22 @@ def kneeLocatorPlotter(x, y, title, kindOfLoc):
 
     plt.figure(figsize = (24, 16))
     plt.plot(x, y)
+    plt.xticks(x)
     plt.title(title + ", optimal k = " + str(kneedle.knee), fontsize = 30)
-    plt.ylabel("distortion_score", fontsize = 30)
+    plt.ylabel("average squared distance to nearest cluster", fontsize = 30)
     plt.xlabel("count clusters", fontsize = 30)
     plt.savefig("figures/cluster_plots/knee_plot_" +  kindOfLoc)
+
+    # plt.style.use("ggplot")
+    # kneedle.plot_knee()
 
     return kneedle.knee
 
 if __name__ == "__main__":
     paths = ["data/locomotion_data_diff1.csv", "data/locomotion_data_diff2.csv", "data/locomotion_data_diff3.csv", "data/locomotion_data_diff4.csv", "data/locomotion_data_same1.csv", "data/locomotion_data_same3.csv", "data/locomotion_data_same4.csv", "data/locomotion_data_same5.csv"]
     #getClusters(paths, "data/", (30,30,30), verbose = True)
-    x, y_mov, y_pos, y_ori = createAverageDistanceForClusters(["data/locomotion_data_diff1.csv"], 1, 25, 1)
+    x, y_mov, y_pos, y_ori = createAverageDistanceForClusters(["data/locomotion_data_diff1.csv"], 8, 50, 1)
 
-    print(kneeLocatorPlotter(x, y_mov, "Count clusters vs. distortion score for linear movement", "mov"))
-    print(kneeLocatorPlotter(x, y_pos, "Count clusters vs. distortion score for change in position (radians)", "pos"))
-    print(kneeLocatorPlotter(x, y_ori, "Count clusters vs. distortion score for change in orientation (radians)", "ori"))
+    print(kneeLocatorPlotter(x, y_mov, "Count clusters vs. avg. distance to each cluster for linear movement", "mov"))
+    print(kneeLocatorPlotter(x, y_pos, "Count clusters vs. avg. distance to each cluster for change in position (radians)", "pos"))
+    print(kneeLocatorPlotter(x, y_ori, "Count clusters vs. avg. distance to each cluster for change in orientation (radians)", "ori"))
