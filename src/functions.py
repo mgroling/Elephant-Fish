@@ -93,7 +93,7 @@ def getAngle(vector1, vector2, mode = "degrees"):
     angle_orth = np.degrees(np.arccos(np.clip(temp_orth, -1, 1)))
 
     #It is on the left side of our vector
-    if angle_orth > 90:
+    if angle_orth < 90:
         angle = 360 - angle
 
     return angle if mode == "degrees" else math.radians(angle)
