@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import os
 import random
+import shap
 
 # Use python 3.6.10
 
@@ -25,6 +26,7 @@ class Simulation:
         self._clusters_mov, self._clusters_pos, self._clusters_ori = readClusters(cluster_path)
         self._clusters_counts = len(self._clusters_mov), len(self._clusters_pos), len(self._clusters_ori)
         self._wall_lines = defineLines(getRedPoints(path = "data/final_redpoint_wall.jpg"))
+        self._tracks = []
 
     def setModel(self, model):
         self._model = model
@@ -32,7 +34,21 @@ class Simulation:
     def getModel(self):
         return self._model
 
-    def trainNetwork(self, locomotion_path, raycasts_path, subtrack_length, batch_size, epochs):
+    def explainParameters(self):
+        # https://github.com/slundberg/shap/blob/master/notebooks/deep_explainer/Keras%20LSTM%20for%20IMDB%20Sentiment%20Classification.ipynb
+        # https://stackoverflow.com/questions/45361559/feature-importance-chart-in-neural-network-using-keras-in-python/61861991#61861991
+        explainer = shap.DeepExplainer(self._model, self._tracks[0])
+        shap_values = explainer.shap_values(self._tracks[0])
+
+        shap.force_plot(explainer.expected_value, shap_values[0,:], self._tracks[0][0,:], matplotlib = True)
+
+        shap.summary_plot(shap_values, self._tracks[0], plot_type = "bar")
+
+    def trainNetwork(self, locomotion_path, raycasts_path, subtrack_length, batch_size, epochs, saveForExplainable = False):
+        """
+        trains the Network on the given dataset, by dividing it into subtracks, each subtrack has a length of subtrack_length,
+        except the last one for each fish (when there are not enough datapoints to get to subtrack_length)
+        """
         X = []
         y = []
         #get last locomotion for input and next for output
@@ -60,11 +76,20 @@ class Simulation:
 
         for i in range(0, len(X)):
             print("Training on Subtrack " + str(i))
-            self._model.fit(X[i], y[i], epochs=epochs, batch_size=batch_size, verbose=2)
+            if saveForExplainable:
+                self._tracks.append(X[i])
+            self._model.fit(X[i], y[i], epochs=epochs, batch_size=batch_size, verbose=1)
 
-    def testNetwork(self, timesteps = 10, save_tracks = None, start = "random"):
+    def testNetwork(self, timesteps = 10, save_tracks = None, start = "random", seed = None):
+        """
+        creates a Simulation for the network and created locomotions for timesteps times
+        the starting position of each fish is random (if start = "random")
+        their last locomotion is the first movement they had in the subtrack training session (such that fish 0 has first locomotion of subtrack 0, fish 1 has subtrack 1 ..)
+        """
+        random.seed(a = seed)
         first_pos = None
-        tracks = np.array([list(chain.from_iterable(("Fish_" + str(i) + "_linear_movement", "Fish_" + str(i) + "_angle_new_pos", "Fish_" + str(i) + "_angle_change_orientation") for i in range(0, self._count_agents)))])
+        tracks_header = np.array([list(chain.from_iterable(("Fish_" + str(i) + "_linear_movement", "Fish_" + str(i) + "_angle_new_pos", "Fish_" + str(i) + "_angle_change_orientation") for i in range(0, self._count_agents)))])
+        tracks = np.empty((timesteps, tracks_header.shape[1]))
         cur_X = [[] for i in range(0, self._count_agents)]
         cur_pos = []
         locomotion = [[] for i in range(0, self._count_agents)]
@@ -73,13 +98,15 @@ class Simulation:
             for i in range(0, self._count_agents):
                 #(250 700) for x (125, 550) for y are good boundaries for coordiantes within the tank
                 x_head, y_head, length, angle_rad = random.uniform(250, 700), random.uniform(125, 550), random.uniform(10,30), math.radians(random.uniform(0, 359))
-                #cur_pos right now is x_head, y_head, x_center, y_center, angle from look_vector to pos_x_axis
+                #cur_pos right now is x_head, y_head, length angle from look_vector to pos_x_axis
                 cur_pos.append([x_head, y_head, length, angle_rad])
                 #take locomotion of first self._count_agents subtracks first locomotion
                 locomotion[i] = self._last_train_X[i][:, :, 0:sum(list(self._clusters_counts))].reshape(1, sum(list(self._clusters_counts)))
         elif start == "last_train":
             # cur_pos = #todo (no priority though)
-            cur_X = self._last_train_X
+            # cur_X = self._last_train_X
+            print("not supported yet")
+            return
 
         first_pos = [[cur_pos[i][j] for j in range(0, len(cur_pos[i]))] for i in range(0, len(cur_pos))]
 
@@ -108,9 +135,9 @@ class Simulation:
                 pred_ori_bins = softmax(pred[:, self._clusters_counts[0]+self._clusters_counts[1] :])
 
                 #select one randomly (with its given percentage)
-                pred_mov_bins_index = selectPercentage(pred_mov_bins[0])
-                pred_pos_bins_index = selectPercentage(pred_pos_bins[0])
-                pred_ori_bins_index = selectPercentage(pred_ori_bins[0])
+                pred_mov_bins_index = selectPercentage(pred_mov_bins[0], seed = seed)
+                pred_pos_bins_index = selectPercentage(pred_pos_bins[0], seed = seed)
+                pred_ori_bins_index = selectPercentage(pred_ori_bins[0], seed = seed)
 
                 #translate index of bin into actual locomotion values
                 pred_mov = self._clusters_mov[pred_mov_bins_index]
@@ -137,9 +164,9 @@ class Simulation:
                 else:
                     new_row = np.append(new_row, np.array([[pred_mov, pred_pos, pred_ori]]), axis = 1)
             
-            tracks = np.append(tracks, new_row, axis = 0)
+            tracks[i] = new_row
 
-        df = pd.DataFrame(data = tracks[1:], columns = tracks[0])
+        df = pd.DataFrame(data = tracks, columns = tracks_header[0])
 
         if save_tracks != None:
             df.to_csv(save_tracks + "locomotion_simulation.csv", sep = ";")
@@ -156,7 +183,7 @@ def main():
     COUNT_RAYS_WALLS = 15
     RADIUS_FIELD_OF_VIEW_WALLS = 180
     RADIUS_FIELD_OF_VIEW_AGENTS = 300
-    MAX_VIEW_RANGE = 600
+    MAX_VIEW_RANGE = 709
     COUNT_FISHES = 3
     CLUSTER_COUNTS = (15, 20, 17)
 
@@ -173,84 +200,11 @@ def main():
     sim.trainNetwork("data/locomotion_data_bin_diff3.csv", "data/raycast_data_diff3.csv", 6000, 10, 10)
     sim.trainNetwork("data/locomotion_data_bin_diff4.csv", "data/raycast_data_diff4.csv", 6000, 10, 10)
     model = sim.getModel()
+
+
+
     model.save("models/model_diff_1_to_4/")
     sim.testNetwork(timesteps = 18000, save_tracks = "data/")
-    # #Set Variables
-    # COUNT_BINS_AGENTS = 21
-    # COUNT_RAYS_WALLS = 15
-    # RADIUS_FIELD_OF_VIEW_WALLS = 180
-    # RADIUS_FIELD_OF_VIEW_AGENTS = 300
-    # MAX_VIEW_RANGE = 600
-    # COUNT_FISHES = 3
-    # N_CLUSTERS = 20
-
-    # #get raycast data (input)
-    # df_ray = pd.read_csv("data/raycast_data.csv", sep = ";")
-    # arr_ray = df_ray.to_numpy()
-
-    # #get locomotion data (input/output)
-    # df_loc = pd.read_csv("data/locomotion_data.csv", sep = ";")
-    # arr_loc = df_loc.to_numpy()
-
-    # #create lists for locomotion clusters
-    # clusters_mov, clusters_pos, clusters_ori = readClusters("data/clusters.txt")
-
-    # #create input/output data to feed to the network
-    # X = None
-    # y = None
-    # for i in range(0, COUNT_FISHES):
-    #     if i == 0:
-    #         X = np.append(np.append(arr_loc[:-1, i*3:(i+1)*3], arr_ray[1:-1, i*COUNT_BINS_AGENTS:(i+1)*COUNT_BINS_AGENTS], axis = 1), arr_ray[1:-1, COUNT_FISHES*COUNT_BINS_AGENTS+i*COUNT_RAYS_WALLS:COUNT_FISHES*COUNT_BINS_AGENTS+(i+1)*COUNT_RAYS_WALLS], axis = 1)
-    #         y = arr_loc[1:, i*3:(i+1)*3]
-    #     else:
-    #         X = np.append(X, np.append(np.append(arr_loc[:-1, i*3:(i+1)*3], arr_ray[1:-1, i*COUNT_BINS_AGENTS:(i+1)*COUNT_BINS_AGENTS], axis = 1), arr_ray[1:-1, COUNT_FISHES*COUNT_BINS_AGENTS+i*COUNT_RAYS_WALLS:COUNT_FISHES*COUNT_BINS_AGENTS+(i+1)*COUNT_RAYS_WALLS], axis = 1), axis = 0)
-    #         y = np.append(y, arr_loc[1:, i*3:(i+1)*3], axis = 0)
-
-
-    # #split data into train and test
-    # X_train = X[:int(len(X)*0.8)]
-    # y_train = y[:int(len(X)*0.8)]
-
-    # X_test = X[int(len(X)*0.8):]
-    # y_test = y[int(len(X)*0.8):]
-
-    # #reshape it for network input
-    # X_train = np.reshape(X_train, (X_train.shape[0], 1, X_train.shape[1]))
-    # X_test = np.reshape(X_test, (X_test.shape[0], 1, X_test.shape[1]))
-
-    # #create model and fit it on training data
-    # model = Sequential()
-    # model.add(LSTM(64, input_shape=(1, X_train.shape[2]), dropout = 0.1, return_sequences = True))
-    # model.add(LSTM(32, input_shape=(1, X_train.shape[2]), dropout = 0.1))
-    # model.add(Dense(16))
-    # model.add(Dense(3))
-    # model.compile(loss='mean_squared_error', optimizer='adam')
-    # model.fit(X_train, y_train, epochs=10, batch_size=128, verbose=2)
-    # model.fit(X_train, y_train, epochs=10, batch_size=128, verbose=2)
-
-    # #predict test data and evaluate results
-    # predict_test = model.predict(X_test)
-    # eval_df = pd.DataFrame(data = predict_test, columns = ["pred_linear_movement", "pred_angle_radians"])
-    # eval_df.insert(0, "linear_movement", y_test[:, 0], False)
-    # eval_df.insert(0, "angle_radians", y_test[:, 1], False)
-    # eval_df.insert(0, "VERROR_movement", abs(eval_df["linear_movement"] - eval_df["pred_linear_movement"]), False)
-    # eval_df.insert(0, "temp1", abs(eval_df["angle_radians"] - (eval_df["pred_angle_radians"] + math.pi*2)), False)
-    # eval_df.insert(0, "temp2", abs(eval_df["angle_radians"] - eval_df["pred_angle_radians"]), False)
-    # eval_df.insert(0, "VERROR_angle", eval_df[["temp1", "temp2"]].min(axis = 1), False)
-    # eval_df.drop(["temp1", "temp2"], axis = 1)
-    # eval_df.insert(0, "ERROR_movement", eval_df["VERROR_movement"]/eval_df["linear_movement"], False)
-    # eval_df.insert(0, "ERROR_angle", eval_df["VERROR_angle"]/eval_df["angle_radians"], False)
-
-    
-
-    # print("Mean VError of linear movement: " + str(eval_df["VERROR_movement"].mean()))
-    # print("Median VError of linear movement: " + str(eval_df["VERROR_movement"].median()))
-    # print("Mean VError of angle (radians): " + str(eval_df["VERROR_angle"].mean()))
-    # print("Median VError of angle (radians): " + str(eval_df["VERROR_angle"].median()))
-    # print("Mean Error of linear movement: " + str(eval_df["ERROR_movement"].mean()))
-    # print("Median Error of linear movement: " + str(eval_df["ERROR_movement"].median()))
-    # print("Mean Error of angle (radians): " + str(eval_df["ERROR_angle"].mean()))
-    # print("Median Error of angle (radians): " + str(eval_df["ERROR_angle"].median()))
 
 if __name__ == "__main__":
     main()

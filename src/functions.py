@@ -174,11 +174,12 @@ def softmax(np_array):
     return np.divide(temp, np.sum(temp, axis = 1).reshape(-1, 1))
 
 
-def selectPercentage(array):
+def selectPercentage(array, seed = None):
     """
     Given an array of percentages that add up to 1, this selects one of the numbers with the certain percentage given
     returns the index of the selected percentage
     """
+    np.random.seed(seed)
     value = 0
     rand = np.random.rand()
     for i in range(0, len(array)):
