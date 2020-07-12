@@ -5,6 +5,8 @@ from sklearn.cluster import KMeans
 import pandas as pd
 import numpy as np
 import collections
+from kneed import KneeLocator
+from yellowbrick.cluster import distortion_score
 import matplotlib.pyplot as plt
 
 from functions import *
@@ -92,7 +94,7 @@ def getClusters(paths, path_to_save, count_clusters = (20, 20, 20), verbose = Fa
         plt.xlabel("clusters", fontsize = 30)
         plt.ylabel("count elements", fontsize = 30)
         plt.xticks(np.arange(count_clusters[0]), np.round(temp_2, 3))
-        plt.savefig("figures/mov_elems_per_cluster_" + str(count_clusters[0]))
+        plt.savefig("figures/cluster_plots/mov_elems_per_cluster_" + str(count_clusters[0]))
         plt.clf()
 
         freq_pos = collections.Counter(kmeans_pos.labels_)
@@ -109,7 +111,7 @@ def getClusters(paths, path_to_save, count_clusters = (20, 20, 20), verbose = Fa
         plt.xlabel("clusters", fontsize = 30)
         plt.ylabel("count elements", fontsize = 30)
         plt.xticks(np.arange(count_clusters[0]), np.round(temp_2, 3))
-        plt.savefig("figures/pos_elems_per_cluster_" + str(count_clusters[0]))
+        plt.savefig("figures/cluster_plots/pos_elems_per_cluster_" + str(count_clusters[0]))
         plt.clf()
 
         freq_ori = collections.Counter(kmeans_ori.labels_)
@@ -126,7 +128,7 @@ def getClusters(paths, path_to_save, count_clusters = (20, 20, 20), verbose = Fa
         plt.xlabel("clusters", fontsize = 30)
         plt.ylabel("count elements", fontsize = 30)
         plt.xticks(np.arange(count_clusters[0]), np.round(temp_2, 3))
-        plt.savefig("figures/ori_elems_per_cluster_" + str(count_clusters[0]))
+        plt.savefig("figures/cluster_plots/ori_elems_per_cluster_" + str(count_clusters[0]))
         plt.clf()
 
     with open(path_to_save + "clusters.txt", "w+") as f:
@@ -138,6 +140,70 @@ def getClusters(paths, path_to_save, count_clusters = (20, 20, 20), verbose = Fa
         for elem in kmeans_ori.cluster_centers_:
             f.write(str(float(elem)) +"\n")
 
+def createAverageDistanceForClusters(paths, count_cluster_min, count_cluster_max, count_cluster_step):
+    #right now it thinks that 0 and 2*pi are not the same for pos and ori, maybe find a solution for it
+    df_list = []
+    for path in paths:
+        df_list.append(pd.read_csv(path, sep = ";"))
+    df_all = pd.concat(df_list)
+
+    #get all linear_movement columns respectivly all angle columns
+    mov_cols = [col for col in df_all.columns if "linear_movement" in col]
+    ang_pos_cols = [col for col in df_all.columns if "angle_new_pos" in col]
+    ang_ori_cols = [col for col in df_all.columns if "angle_change_orientation" in col]
+
+    df_mov = df_all[mov_cols].melt(var_name = "columns", value_name = "value")
+    df_pos = df_all[ang_pos_cols].melt(var_name = "columns", value_name = "value")
+    df_ori = df_all[ang_ori_cols].melt(var_name = "columns", value_name = "value")
+
+    df_pos["value"] = convertRadiansRange(df_pos["value"].to_numpy())
+    df_ori["value"] = convertRadiansRange(df_ori["value"].to_numpy())
+
+    y_mov = []
+    y_pos = []
+    y_ori = []
+    x = []
+
+    for i in range(count_cluster_min, count_cluster_max+1, count_cluster_step):
+        print("||| Now computing for n_clusters = " + str(i) + " |||")
+        kmeans_mov = KMeans(n_clusters = i)
+        kmeans_pos = KMeans(n_clusters = i)
+        kmeans_ori = KMeans(n_clusters = i)
+
+        kmeans_mov.fit_transform(df_mov["value"].to_numpy().reshape(-1, 1))
+        kmeans_pos.fit_transform(df_pos["value"].to_numpy().reshape(-1, 1))
+        kmeans_ori.fit_transform(df_ori["value"].to_numpy().reshape(-1, 1))
+
+        dist_mov = distortion_score(df_mov["value"].to_numpy().reshape(-1, 1), kmeans_mov.labels_)
+        dist_pos = distortion_score(df_pos["value"].to_numpy().reshape(-1, 1), kmeans_pos.labels_)
+        dist_ori = distortion_score(df_ori["value"].to_numpy().reshape(-1, 1), kmeans_ori.labels_)
+
+        y_mov.append(dist_mov)
+        y_pos.append(dist_pos)
+        y_ori.append(dist_ori)
+        x.append(i)
+
+    return x, y_mov, y_pos, y_ori
+
+def kneeLocatorPlotter(x, y, title, kindOfLoc):
+    # https://www.kaggle.com/kevinarvai/knee-elbow-point-detection
+
+    kneedle = KneeLocator(x, y, S=1.0, curve = "convex", direction = "decreasing")
+
+    plt.figure(figsize = (24, 16))
+    plt.plot(x, y)
+    plt.title(title + ", optimal k = " + str(kneedle.knee), fontsize = 30)
+    plt.ylabel("distortion_score", fontsize = 30)
+    plt.xlabel("count clusters", fontsize = 30)
+    plt.savefig("figures/cluster_plots/knee_plot_" +  kindOfLoc)
+
+    return kneedle.knee
+
 if __name__ == "__main__":
-    paths = ["data/locomotion_data_diff1.csv", "data/locomotion_data_diff2.csv", "data/locomotion_data_diff3.csv", "data/locomotion_data_diff4.csv"]
-    getClusters(paths, "data/", (20,20,20), verbose = True)
+    paths = ["data/locomotion_data_diff1.csv", "data/locomotion_data_diff2.csv", "data/locomotion_data_diff3.csv", "data/locomotion_data_diff4.csv", "data/locomotion_data_same1.csv", "data/locomotion_data_same3.csv", "data/locomotion_data_same4.csv", "data/locomotion_data_same5.csv"]
+    #getClusters(paths, "data/", (30,30,30), verbose = True)
+    x, y_mov, y_pos, y_ori = createAverageDistanceForClusters(["data/locomotion_data_diff1.csv"], 1, 25, 1)
+
+    print(kneeLocatorPlotter(x, y_mov, "Count clusters vs. distortion score for linear movement", "mov"))
+    print(kneeLocatorPlotter(x, y_pos, "Count clusters vs. distortion score for change in position (radians)", "pos"))
+    print(kneeLocatorPlotter(x, y_ori, "Count clusters vs. distortion score for change in orientation (radians)", "ori"))
