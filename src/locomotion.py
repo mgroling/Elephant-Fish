@@ -35,11 +35,11 @@ def getLocomotion(np_array, path_to_save_to = None, mode="radians"):
             #new look vector
             look_vector_next = (head_x_next - center_x_next, head_y_next - center_y_next)
             #vector to new position
-            vector_next = (head_x - head_x_next, head_y - head_y_next)
+            vector_next = (center_x - center_x_next, center_y - center_y_next)
 
             new_row[j*3+1] = getAngle(look_vector, vector_next, mode = mode)
             new_row[j*3+2] = getAngle(look_vector, look_vector_next, mode = mode)
-            temp = getDistance(head_x, head_y, head_x_next, head_y_next)
+            temp = getDistance(center_x, center_y, center_x_next, center_y_next)
             #its forward movement if it's new position is not at the back of the fish and otherwise it is backward movement
             new_row[j*3] = -temp if new_row[j*3+1] > math.pi/2 and new_row[j*3+1] < 3/2*math.pi else temp
         output[i] = new_row
@@ -84,14 +84,14 @@ def convertLocmotionToBin(loco, clusters_path, path_to_save = None, probabilitie
         df.to_csv(path_to_save, sep = ";")
 
 def main():
-    file = "data/sleap_1_same3.h5"
+    file = "data/sleap_1_same5.h5"
 
-    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])[130:]
+    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])[:]
 
     print("shape:",temp.shape)
 
     #get locomotion and save it
-    getLocomotion(temp, "data/locomotion_data_same3.csv")
+    getLocomotion(temp, "data/locomotion_data_same5.csv")
 
     # get locomotion
     # df = pd.read_csv("data/locomotion_data_diff4.csv", sep = ";")
