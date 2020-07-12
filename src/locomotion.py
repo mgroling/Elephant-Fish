@@ -105,18 +105,18 @@ def row_l2c( coords, locs ):
 
     new_angles = ( coords[os] + locs[ang] ) % ( np.pi * 2 )
 
-    # print( "orientations ", coords[os] )
-    # print( "lins ", locs[lin] )
-    # print( "angs ", locs[ang] )
+    print( "orientations ", coords[os] )
+    print( "lins ", locs[lin] )
+    print( "angs ", locs[ang] )
     # # print( "trns ", trns )
     # print( "new_angles ", new_angles )
-    xvals = np.cos( new_angles ) * locs[lin]
-    yvals = np.sin( new_angles ) * locs[lin]
+    xvals = np.cos( new_angles ) * np.abs( locs[lin] )
+    yvals = np.sin( new_angles ) * np.abs( locs[lin] )
 
     out = np.empty( coords.shape )
 
-    out[xs] = coords[xs] - yvals
-    out[ys] = coords[ys] - xvals
+    out[xs] = coords[xs] + xvals
+    out[ys] = coords[ys] + yvals
 
     # print(out)
 
@@ -156,12 +156,16 @@ def convertLocomotionToCoordinates( loc, startpoints ):
         disCH.append( getDistance( startpoints[4 * f], startpoints[4 * f + 1], startpoints[4 * f + 2], startpoints[4 * f + 3] ) )
         out[0,3 * f] = startpoints[4 * f + 2]
         out[0,3 * f + 1] = startpoints[4 * f + 3]
-        out[0,3 * f + 2] = getAngle( (startpoints[4 * f], startpoints[4 * f + 1],), (startpoints[4 * f + 2], startpoints[4 * f + 3],), "radians" )
+        # Angle between Fish Orientation and the unit vector
+        out[0,3 * f + 2] = getAngle( (startpoints[4 * f] - startpoints[4 * f + 2], startpoints[4 * f + 1] - startpoints[4 * f + 3],), (1,0,), "radians" )
 
-    for i in range(0, row):
-        out[i + 1] = row_l2c( out[i], loc[i] )
+    out[1] = row_l2c( out[0], loc[0] )
+    out[2] = row_l2c( out[1], loc[1] )
+    # for i in range(0, row):
+    #     out[i + 1] = row_l2c( out[i], loc[i] )
 
-    print(out)
+    print(out[0])
+    print(out[1])
     return out
 
 
@@ -170,12 +174,12 @@ def convertLocomotionToCoordinates( loc, startpoints ):
 def main():
     file = "data/sleap_1_diff2.h5"
 
-    temp = extract_coordinates(file, [b'head',b'center'], fish_to_extract=[0,1,2])
+    temp = extract_coordinates(file, [b'center'], fish_to_extract=[0,1,2])
 
     print(temp[0])
     print(temp[1])
-    print( getDistance(temp[0,2], temp[0,3], temp[1,2], temp[1,3]) )
-    print(temp[-1])
+    print( getDistance(temp[0,0], temp[0,1], temp[1,0], temp[1,1]) )
+    # print(temp[-1])
 
     # get locomotion
     df = pd.read_csv("data/locomotion_data_diff2.csv", sep = ";")
