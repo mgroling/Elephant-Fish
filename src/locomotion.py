@@ -86,47 +86,31 @@ def convertLocmotionToBin(loco, clusters_path, path_to_save = None, probabilitie
 
 def row_l2c( coords, locs ):
     """
-    Returns 1d ndarray with new coordinates based on previos coordinades and given locs
+    Returns 1d ndarray with new coordinates based on previos coordinades and given locomotions,
+    Output: [center1_x, center1_y, orientation1, ...]
     """
     nfish = len(coords) // 3
 
-    # print( "coords: ", coords )
-    # print( "locs  : ", locs )
-
-    # Indices
-    # coords
+    # coords indices
     xs = [3 * x for x in range(nfish)]
     ys = [3 * x + 1 for x in range(nfish)]
     os = [3 * x + 2 for x in range(nfish)]
-    # locs
+    # locs indices
     lin = [3 * x for x in range(nfish)]
     ang = [3 * x + 1 for x in range(nfish)]
     ori = [3 * x + 2 for x in range(nfish)]
-
+    # computation
     new_angles = ( coords[os] + locs[ang] ) % ( np.pi * 2 )
-
-    print( "orientations ", coords[os] )
-    print( "lins ", locs[lin] )
-    print( "angs ", locs[ang] )
-    # # print( "trns ", trns )
-    # print( "new_angles ", new_angles )
     xvals = np.cos( new_angles ) * np.abs( locs[lin] )
     yvals = np.sin( new_angles ) * np.abs( locs[lin] )
-
     out = np.empty( coords.shape )
-
     out[xs] = coords[xs] + xvals
     out[ys] = coords[ys] + yvals
-
-    # print(out)
-
-    # print( getDistance(coords[0], coords[1], out[0], out[1]) )
     out[os] = ( coords[os] + locs[ori] ) % ( np.pi * 2 )
     return out
 
 
-
-def convertLocomotionToCoordinates( loc, startpoints ):
+def convLocToCart( loc, startpoints ):
     """
     Converts locomotion np array to coordinates,
     assumens first fish "looks" upwards
@@ -140,6 +124,13 @@ def convertLocomotionToCoordinates( loc, startpoints ):
     startpoints:
         two nodes per fish exactly:
         [head1_x, head1_y, center1_x, center1_y, head2_x, head2_y, center2_x, center2_y,...]
+    Output:
+
+        [
+            [center1_x, center1_y, orientation1, ...]
+            [center1_x, center1_y, orientation1, ...]
+            ...
+        ]
     """
     row, col = loc.shape
     assert row > 1
@@ -157,18 +148,12 @@ def convertLocomotionToCoordinates( loc, startpoints ):
         out[0,3 * f] = startpoints[4 * f + 2]
         out[0,3 * f + 1] = startpoints[4 * f + 3]
         # Angle between Fish Orientation and the unit vector
-        out[0,3 * f + 2] = getAngle( (startpoints[4 * f] - startpoints[4 * f + 2], startpoints[4 * f + 1] - startpoints[4 * f + 3],), (1,0,), "radians" )
+        out[0,3 * f + 2] = getAngle( (1,0,), (startpoints[4 * f] - startpoints[4 * f + 2], startpoints[4 * f + 1] - startpoints[4 * f + 3],), "radians" )
 
-    out[1] = row_l2c( out[0], loc[0] )
-    out[2] = row_l2c( out[1], loc[1] )
-    # for i in range(0, row):
-    #     out[i + 1] = row_l2c( out[i], loc[i] )
+    for i in range(0, row):
+        out[i + 1] = row_l2c( out[i], loc[i] )
 
-    print(out[0])
-    print(out[1])
     return out
-
-
 
 
 def main():
@@ -179,7 +164,7 @@ def main():
     print(temp[0])
     print(temp[1])
     print( getDistance(temp[0,0], temp[0,1], temp[1,0], temp[1,1]) )
-    # print(temp[-1])
+    print(temp[-1])
 
     # get locomotion
     df = pd.read_csv("data/locomotion_data_diff2.csv", sep = ";")
