@@ -230,7 +230,7 @@ def plot_velocities( tracks, clusterfile = None ):
     ax.set_xlim(-20, 20)
     seaborn.distplot(pd.Series(linear_velocities, name="Linear movement"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
     if clusterfile is not None:
-        seaborn.rugplot(cLin, height=0.03, ax=ax, color="r", linewidth=3, name="test")
+        seaborn.rugplot(cLin, height=0.03, ax=ax, color="r", linewidth=3)
 
     return fig_linear, fig_angular, fig_turn
 
