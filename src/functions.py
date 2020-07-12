@@ -194,3 +194,17 @@ def convertRadiansRange(ang_vel):
     """
     ang_vel[ang_vel > np.pi] = ang_vel[ang_vel > np.pi] - 2*np.pi
     return ang_vel
+
+
+def convPolarToCart( polarTracks, distances ):
+    """
+    Input:
+    polarTracks:
+        [
+            [center1_x, center1_y, orientation1, ...]
+            [center1_x, center1_y, orientation1, ...]
+        ]
+    distances:
+        [disCH1, disCH2, ...]
+    """
+    nfish = len( distances )
