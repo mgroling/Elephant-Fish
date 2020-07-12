@@ -134,14 +134,14 @@ def main():
     #         temp = getDistance(our_wall_lines[i][0], our_wall_lines[i][1], our_wall_lines[j][0], our_wall_lines[j][1])
     #         if temp > max_dist:
     #             max_dist = temp
-    
+
     # print(max_dist) #max dist = 708.3784299369935
 
     ray = Raycast(our_wall_lines, COUNT_BINS_AGENTS, WALL_RAYS_WALLS, RADIUS_FIELD_OF_VIEW_AGENTS, RADIUS_FIELD_OF_VIEW_WALLS, MAX_VIEW_RANGE, COUNT_FISHES)
 
     file = "data/sleap_1_same5.h5"
 
-    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])
+    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])[0:17000]
 
     print("shape:",temp.shape)
 
