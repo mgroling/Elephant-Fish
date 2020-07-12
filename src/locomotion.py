@@ -35,7 +35,7 @@ def getLocomotion(np_array, path_to_save_to = None, mode="radians"):
             #new look vector
             look_vector_next = (head_x_next - center_x_next, head_y_next - center_y_next)
             #vector to new position
-            vector_next = (center_x - center_x_next, center_y - center_y_next)
+            vector_next = (center_x_next - center_x, center_y_next - center_y)
 
             new_row[j*3+1] = getAngle(look_vector, vector_next, mode = mode)
             new_row[j*3+2] = getAngle(look_vector, look_vector_next, mode = mode)

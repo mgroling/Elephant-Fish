@@ -97,9 +97,9 @@ class Simulation:
         if start == "random":
             for i in range(0, self._count_agents):
                 #(250 700) for x (125, 550) for y are good boundaries for coordiantes within the tank
-                x_head, y_head, length, angle_rad = random.uniform(250, 700), random.uniform(125, 550), random.uniform(10,30), math.radians(random.uniform(0, 359))
+                x_center, y_center, length, angle_rad = random.uniform(250, 700), random.uniform(125, 550), random.uniform(10,30), math.radians(random.uniform(0, 359))
                 #cur_pos right now is x_head, y_head, length angle from look_vector to pos_x_axis
-                cur_pos.append([x_head, y_head, length, angle_rad])
+                cur_pos.append([x_center, y_center, length, angle_rad])
                 #take locomotion of first self._count_agents subtracks first locomotion
                 locomotion[i] = self._last_train_X[i][:, :, 0:sum(list(self._clusters_counts))].reshape(1, sum(list(self._clusters_counts)))
         elif start == "last_train":
