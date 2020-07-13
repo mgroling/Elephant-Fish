@@ -145,3 +145,24 @@ If only given center and head values, you can use
 @TODO
 ```
 to add static positions for the fish.
+
+# 10 Node Model
+
+## The nloc model
+
+Datastructure to represent movement. n stands for the amount of nodes per fish
+* The first three arguments provide the change from the old center point to the new one
+* From that point the base fish model will be computed on
+* The rest (n - 1) * 2 arguments are the distance and orientation to the center node
+
+This is how an nloc array looks:
+` [ [f1_lin, f1_ang, f1_ori, f1_1_dis, d1_1_ori, f1_2_dis, f1_2_ori, ..., f2_lin, f2_ang, f2_ori, ...], ... ]`
+
+## Input
+
+The fish gets as input:
+* Locomotion Output Last time step
+* All 10 nodes from the other fish
+* The nloc for that timestep
+The fish gives as output:
+* The nloc for that timestep
