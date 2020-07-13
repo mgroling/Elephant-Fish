@@ -19,6 +19,14 @@ These dependencies will be needed for this project to work:
 * itertools
 * os
 * opencv2 4.3.0.36 (opencv-python)
+* itertools
+* keras
+* tensorflow
+* random
+* shap
+* collections
+* kneed
+
 
 # Workflow
 
@@ -66,7 +74,17 @@ same_4: entire video
 same_5: entire video
 ```
 
-Best labels on: same_2
+## Bin Representation of Locomotion
+
+For our model input and output of locomotion was in the form of bin representation.\
+This means that a given locomotion, e.g. linear movement of 3 is matched to bins, say bin 2 and 5 where 2 has a higher percentage cause it represents the locomotion better.\
+We used this form of locomotion representation because movement of fishes is not deterministic and we wanted some way of portraying that.\
+However this leaves one with a decision to which bin centers should be used and how many one should use.\
+For the problem of how which center points to use, we decided that it would make sense to apply kmeans to our given locomotion from the videos, giving us higher precision in sections where a lot of movement occured.\
+Now for the problem of how many center points to use, we had an objective to use as few center points as possible, that still lead to an acceptable amount of loss of information. After considering plots of locomotion, we decided that at least at 8 bins should be used for linear movement and for change in orientation (this basically gives us a wasd-keyboard for change in orientation and enough bins to have certain speeds of going forward and backward) and at least 16 for the angular change (this plot was a lot more evenly distributed, than the orientation plot, which lead us to to the belief that this one needs more ways of moving)\
+Now we had the minimum number of bins to use, however this would probably not be that good. We plotted the loss of information vs count of clusters and used a method to find the elbow of that curve (point that has the maximum curvature). (see figures/cluster_plots) And this gives us kind of an optimal value for how many cluster centers to use. We decided to set a max value of 50 cluster centers, the loss of information stagnated at about that point.
+
+##### TL;DR We used a bin representation of locomotion (using kmeans as centers) and used 18 bins for linear movement, 17 for change in orientation and 26 for angular change.
 
 ## Future improvements
 
