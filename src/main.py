@@ -72,7 +72,7 @@ class Simulation:
 
                 #get raycasts
                 X[-1] = np.append(np.append(X[-1], raycasts[subtrack*subtrack_length+1 : min((subtrack+1)*subtrack_length, len(raycasts)-2), i*self._count_bins : (i+1)*self._count_bins], axis = 1), raycasts[subtrack*subtrack_length+1 : min((subtrack+1)*subtrack_length, len(raycasts)-2), self._count_agents*self._count_bins+i*self._count_rays : self._count_agents*self._count_bins+(i+1)*self._count_rays], axis = 1)
-        
+
                 #reshape for network input
                 X[-1] = np.reshape(X[-1], (X[-1].shape[0], 1, X[-1].shape[1]))
 
@@ -122,7 +122,7 @@ class Simulation:
             if i!=0 and i%1000 == 0 and self.verbose >= 1:
                 print("||| Timestep " + str(i) + " finished. |||")
             new_row = None
-            
+
             #get Raycasts
             input_raycasts = [None for j in range(0, self._count_agents)]
             for j in range(0, self._count_agents):
@@ -189,7 +189,7 @@ class Simulation:
                     new_row = np.array([[pred_mov, pred_pos, pred_ori]])
                 else:
                     new_row = np.append(new_row, np.array([[pred_mov, pred_pos, pred_ori]]), axis = 1)
-            
+
             tracks[i] = new_row
 
         if verbose >= 1:
@@ -218,7 +218,7 @@ class Simulation:
             #check if intersection is between the x of that wall line (it was actually between these 2 points that mark that wall line) and it was to the right of our center point
             if intersect[0] >= min(self._wall_lines[i][0], self._wall_lines[i][2]) and intersect[0] <= max(self._wall_lines[i][0], self._wall_lines[i][2]) and intersect[0] >= center_x:
                 collissions += 1
-            
+
         if collissions % 2 == 1:
             return True
         else:
