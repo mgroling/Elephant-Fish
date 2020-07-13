@@ -92,7 +92,7 @@ Improvements we did not invest time in, since the data retrieval was not the mai
 
 * More training on data in sleap (probably 200 - 600 frames more), specifically for edge cases
 * Better interpolation method:
-* Detect outliers not by constant velocity but rather by a factor dependend on the current velocity
+* Detect outliers not by constant velocity but rather by a factor depending on the current velocity
 * Detect "really bad sequence" of frames more reliably
 * Include consistency checks on Nodes in relation to each other (e.g. center needs to be between tail and head, and many more)
 
