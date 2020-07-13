@@ -18,6 +18,7 @@ These dependencies will be needed for this project to work:
 * math
 * itertools
 * os
+* opencv2 4.3.0.36 (opencv-python)
 * itertools
 * keras
 * tensorflow
@@ -94,3 +95,53 @@ Improvements we did not invest time in, since the data retrieval was not the mai
 * Detect outliers not by constant velocity but rather by a factor dependend on the current velocity
 * Detect "really bad sequence" of frames more reliably
 * Include consistency checks on Nodes in relation to each other (e.g. center needs to be between tail and head, and many more)
+
+# Visualization
+
+Make sure to have opencv 4.3.0 set up correctly, also set up ffmpeg/gstreamer.
+
+## Tracksets on Videos
+
+```
+visualization.addTracksOnVideo( inputvideo, outputvideo, tracks, nfish = 3, fps=30, dimension=(960,720), psize=1, showvid=False, skeleton=None )
+
+inputvideo: path to inputvideo
+outputviedo: path to outputvideo
+tracks: trackset with tracks for every frame of inputvideo
+nfish: number of fish in trackset
+psize: size of the points put on fish
+showvid: show video while rendering (for debugging)
+skeleton: A mapping of indices to connect points with lines,
+    e.g. trackset with rows: [head1_x, head1_y, center1_x, center1_y, head2_x, ...]
+    to connect center and head give [(0,1)]
+
+    for full trackset (10 nodes per fish) use this:
+    [(0,1), (0,2), (0,3), (1,2), (1,3), (2,4), (3,5), (2,6), (3,7), (6,8), (7,8), (8,9)]
+```
+
+## Tracksets on Tank
+
+```
+visualization.addTracksOnTank( outputvideo, tracks, tank="data/tank.png", nfish = 3, fps=30, dimension=(960,720), psize=1, showvid=False, skeleton=None )
+
+outputviedo: path to outputvideo
+tracks: trackset with tracks for every frame of inputvideo
+tank: tank picture in background
+nfish: number of fish in trackset
+psize: size of the points put on fish
+showvid: show video while rendering (for debugging)
+skeleton: A mapping of indices to connect points with lines,
+    e.g. trackset with rows: [head1_x, head1_y, center1_x, center1_y, head2_x, ...]
+    to connect center and head give [(0,1)]
+
+    for full trackset (10 nodes per fish) use this:
+    [(0,1), (0,2), (0,3), (1,2), (1,3), (2,4), (3,5), (2,6), (3,7), (6,8), (7,8), (8,9)]
+```
+
+## Fish emplacement
+
+If only given center and head values, you can use
+```
+@TODO
+```
+to add static positions for the fish.
