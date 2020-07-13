@@ -18,6 +18,14 @@ These dependencies will be needed for this project to work:
 * math
 * itertools
 * os
+* itertools
+* keras
+* tensorflow
+* random
+* shap
+* collections
+* kneed
+
 
 # Workflow
 
