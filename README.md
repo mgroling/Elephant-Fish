@@ -18,6 +18,7 @@ These dependencies will be needed for this project to work:
 * math
 * itertools
 * os
+* opencv2 4.3.0.36 (opencv-python)
 
 # Workflow
 
@@ -76,3 +77,7 @@ Improvements we did not invest time in, since the data retrieval was not the mai
 * Detect outliers not by constant velocity but rather by a factor dependend on the current velocity
 * Detect "really bad sequence" of frames more reliably
 * Include consistency checks on Nodes in relation to each other (e.g. center needs to be between tail and head, and many more)
+
+# Visualization
+
+Make sure to have opencv 4.3.0 set up correctly, also set up ffmpeg/gstreamer.
