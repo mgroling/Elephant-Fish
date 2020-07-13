@@ -77,9 +77,6 @@ Now we had the minimum number of bins to use, however this would probably not be
 
 ##### TL;DR We used a bin representation of locomotion (using kmeans as centers) and used 18 bins for linear movement, 17 for change in orientation and 26 for angular change.
 
-
-Best labels on: same_2
-
 ## Future improvements
 
 Improvements we did not invest time in, since the data retrieval was not the main focus of this software project.
