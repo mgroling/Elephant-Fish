@@ -236,3 +236,17 @@ def convPolarToCart( polarTracks, distances ):
         out[:, 4 * f + 1] = out[:, 4 * f + 3] + np.sin( polarTracks[:, 3 * f + 2] ) * distances[f]
 
     return out
+
+def readStartposition(path):
+    distances = []
+    polarTracks = []
+    with open(path, "r") as f:
+        content = f.read().replace("[", "").replace("]", "").replace("\n", ",").replace(" ", "").split(",")
+        content = [float(content[i]) for i in range(0, len(content)-1)]
+        for i in range(0, int(len(content)/4)):
+            polarTracks.append(content[i*4])
+            polarTracks.append(content[i*4+1])
+            distances.append(content[i*4+2])
+            polarTracks.append(content[i*4+3])
+
+    return polarTracks, distances

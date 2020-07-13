@@ -35,6 +35,7 @@ class Simulation:
         return self._model
 
     def explainParameters(self):
+        #TODO
         # https://github.com/slundberg/shap/blob/master/notebooks/deep_explainer/Keras%20LSTM%20for%20IMDB%20Sentiment%20Classification.ipynb
         # https://stackoverflow.com/questions/45361559/feature-importance-chart-in-neural-network-using-keras-in-python/61861991#61861991
         explainer = shap.DeepExplainer(self._model, self._tracks[0])
@@ -176,6 +177,44 @@ class Simulation:
         else:
             return df, first_pos
 
+    def isFishInsideTank(self, center_x, center_y):
+        """
+        checks if fish center point is outside of the fish tank
+        using this method: https://www.geeksforgeeks.org/how-to-check-if-a-given-point-lies-inside-a-polygon/#:~:text=1)%20Draw%20a%20horizontal%20line,true%2C%20then%20point%20lies%20outside.
+        """
+        collissions = 0
+        for i in range(0, len(self._wall_lines)):
+            #get intersection of horizontal line from x to the right and get the intersection with each wall
+            intersect = get_intersect((center_x, center_y), (center_x+1, center_y), (self._wall_lines[i][0], self._wall_lines[i][1]), (self._wall_lines[i][2], self._wall_lines[i][3]))
+
+            #check if intersection is between the x of that wall line (it was actually between these 2 points that mark that wall line) and it was to the right of our center point
+            if intersect[0] >= min(self._wall_lines[i][0], self._wall_lines[i][2]) and intersect[0] <= max(self._wall_lines[i][0], self._wall_lines[i][2]) and intersect[0] >= center_x:
+                collissions += 1
+            
+        if collissions % 2 == 1:
+            return True
+        else:
+            return False
+
+    def moveToCenter(self, cur_pos):
+        """
+        gives locomotion for moving to center, given a current position of a fish (center_x, center_y, length, orientation in radians)
+        for use if a fish decides to go into the real world
+        """
+        centerPoint = 225, 225
+        look_vector = cur_pos[0] + cur_pos[2]*math.cos(cur_pos[3]) - cur_pos[0], cur_pos[1] + cur_pos[2]*math.sin(cur_pos[3]) - cur_pos[1]
+        vectorToCenter = centerPoint[0] - cur_pos[0], centerPoint[1] - cur_pos[1]
+
+        mov = 20
+        pos = getAngle(look_vector, vectorToCenter, mode = "radians")
+        ori = pos
+
+        #convert it to bin representation
+        loco = np.array([mov, pos, ori])
+        loco_bin = convertLocmotionToBin(loco, "data/clusters.txt")
+
+        return mov, pos, ori, loco_bin
+
 def main():
     #importance of variables for analysis later: https://stackoverflow.com/questions/45361559/feature-importance-chart-in-neural-network-using-keras-in-python/61861991#61861991
     #Set Variables
@@ -185,7 +224,7 @@ def main():
     RADIUS_FIELD_OF_VIEW_AGENTS = 300
     MAX_VIEW_RANGE = 709
     COUNT_FISHES = 3
-    CLUSTER_COUNTS = (15, 20, 17)
+    CLUSTER_COUNTS = (18, 17, 26)
 
     model = Sequential()
     model.add(LSTM(256, input_shape=(1, COUNT_BINS_AGENTS+COUNT_RAYS_WALLS+sum(list(CLUSTER_COUNTS))), dropout = 0.1))
