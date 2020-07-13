@@ -539,7 +539,15 @@ def animate_positions(track, track2 = None):
 def main():
 
     # create_all_plots_together()
-    create_all_plots_separate()
+    # create_all_plots_separate()
+    # get locomotion
+    df = pd.read_csv("data/locomotion_simulation.csv", index_col=0, sep = ";")
+    loc = df.to_numpy()
+    distances = [22.70151645748765, 11.80820528094036, 21.32714895551549]
+    polarTracks = np.array([[408.4131257097944, 321.88652359668686, 5.412909238431337, 366.9314135974851, 229.4614791656282, 0.406224943954624, 516.1784567524802, 535.9983967334214, 2.52111734298587]])
+    startpositions = convPolarToCart( polarTracks, distances )[0]
+    tracks = locomotion.convLocToCart( loc, startpositions )
+    create_plots( tracks, path="figures/simulation" )
 
 if __name__ == "__main__":
     main()
