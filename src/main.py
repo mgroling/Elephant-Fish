@@ -15,7 +15,7 @@ import shap
 # Use python 3.6.10
 
 class Simulation:
-    def __init__(self, count_bins_agents, count_rays_walls, radius_fov_walls, radius_fov_agents, max_view_range, count_fishes, cluster_path):
+    def __init__(self, count_bins_agents, count_rays_walls, radius_fov_walls, radius_fov_agents, max_view_range, count_fishes, cluster_path, verbose = 1):
         self._count_bins = count_bins_agents
         self._count_rays = count_rays_walls
         self._fov_walls = radius_fov_walls
@@ -27,6 +27,7 @@ class Simulation:
         self._clusters_counts = len(self._clusters_mov), len(self._clusters_pos), len(self._clusters_ori)
         self._wall_lines = defineLines(getRedPoints(path = "data/final_redpoint_wall.jpg"))
         self._tracks = []
+        self.verbose = verbose
 
     def setModel(self, model):
         self._model = model
@@ -59,6 +60,10 @@ class Simulation:
 
         df = pd.read_csv(raycasts_path, sep = ";")
         raycasts = df.to_numpy()
+
+        if self.verbose >= 1:
+            print("started training on " + locomotion_path[-9:-4])
+
         for i in range(0, self._count_agents):
             for subtrack in range(0, int(len(locomotion)/subtrack_length)+1):
                 #get locomotion
@@ -76,10 +81,11 @@ class Simulation:
             self._last_train_X.append(X[i][0, :, :].reshape(1, 1, X[i].shape[-1]))
 
         for i in range(0, len(X)):
-            print("Training on Subtrack " + str(i))
+            if self.verbose >= 2:
+                print("Training on Subtrack " + str(i))
             if saveForExplainable:
                 self._tracks.append(X[i])
-            self._model.fit(X[i], y[i], epochs=epochs, batch_size=batch_size, verbose=1)
+            self._model.fit(X[i], y[i], epochs=epochs, batch_size=batch_size, verbose=0)
 
     def testNetwork(self, timesteps = 10, save_tracks = None, start = "random", seed = None):
         """
@@ -87,6 +93,7 @@ class Simulation:
         the starting position of each fish is random (if start = "random")
         their last locomotion is the first movement they had in the subtrack training session (such that fish 0 has first locomotion of subtrack 0, fish 1 has subtrack 1 ..)
         """
+        out_of_tank = 0
         random.seed(a = seed)
         first_pos = None
         tracks_header = np.array([list(chain.from_iterable(("Fish_" + str(i) + "_linear_movement", "Fish_" + str(i) + "_angle_new_pos", "Fish_" + str(i) + "_angle_change_orientation") for i in range(0, self._count_agents)))])
@@ -112,7 +119,7 @@ class Simulation:
         first_pos = [[cur_pos[i][j] for j in range(0, len(cur_pos[i]))] for i in range(0, len(cur_pos))]
 
         for i in range(0, timesteps):
-            if i!=0 and i%1000 == 0:
+            if i!=0 and i%1000 == 0 and self.verbose >= 1:
                 print("||| Timestep " + str(i) + " finished. |||")
             new_row = None
             
@@ -148,16 +155,34 @@ class Simulation:
                 #chage movement to be always positive (in locomotion)
                 angle_pos = (cur_pos[j][3] + pred_pos) - 2*math.pi if (cur_pos[j][3] + pred_pos) > 2*math.pi else (cur_pos[j][3] + pred_pos)
                 movement_vector = (abs(pred_mov)*math.cos(angle_pos), abs(pred_mov)*math.sin(angle_pos))
-
                 angle_ori = (cur_pos[j][3] + pred_ori) - 2*math.pi if (cur_pos[j][3] + pred_ori) > 2*math.pi else (cur_pos[j][3] + pred_ori)
+
+                temp_x = cur_pos[j][0]
+                temp_y = cur_pos[j][1]
+                temp_ori = cur_pos[j][3]
 
                 #add cur_pos vector to movement_vector
                 cur_pos[j][0] += movement_vector[0]
                 cur_pos[j][1] += movement_vector[1]
                 cur_pos[j][3] = angle_ori
 
-                #save old locomotion for next iterations network input
-                locomotion[j] = np.append(np.append(pred_mov_bins, pred_pos_bins, axis = 1), pred_ori_bins, axis = 1)
+                #if fish would be outside of the tank after moving, make him move towards the center instead
+                if not self.isFishInsideTank:
+                    out_of_tank += 1
+                    pred_mov, pred_pos, pred_ori, loco_bin = self.moveToCenter(cur_pos[j])
+
+                    angle_pos = (temp_ori + pred_pos) - 2*math.pi if (temp_ori + pred_pos) > 2*math.pi else (temp_ori + pred_pos)
+                    movement_vector = (abs(pred_mov)*math.cos(angle_pos), abs(pred_mov)*math.sin(angle_pos))
+                    angle_ori = (temp_ori + pred_ori) - 2*math.pi if (temp_ori + pred_ori) > 2*math.pi else (temp_ori + pred_ori)
+
+                    cur_pos[j][0] = temp_x + movement_vector[0]
+                    cur_pos[j][1] = temp_y + movement_vector[1]
+                    cur_pos[j][3] = angle_ori
+
+                    locomotion[j] = loco_bin
+                else:
+                    #save old locomotion for next iterations network input
+                    locomotion[j] = np.append(np.append(pred_mov_bins, pred_pos_bins, axis = 1), pred_ori_bins, axis = 1)
 
                 #save locomotion for output
                 if j == 0:
@@ -166,6 +191,9 @@ class Simulation:
                     new_row = np.append(new_row, np.array([[pred_mov, pred_pos, pred_ori]]), axis = 1)
             
             tracks[i] = new_row
+
+        if verbose >= 1:
+            print("fish tried to move " + str(out_of_tank) + " times out tank")
 
         df = pd.DataFrame(data = tracks, columns = tracks_header[0])
 
@@ -207,7 +235,7 @@ class Simulation:
 
         mov = 20
         pos = getAngle(look_vector, vectorToCenter, mode = "radians")
-        ori = pos
+        ori = cur_pos[3]
 
         #convert it to bin representation
         loco = np.array([mov, pos, ori])
