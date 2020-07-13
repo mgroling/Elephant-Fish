@@ -9,24 +9,36 @@ from analysis import *
 from functions import *
 
 
-def plot_follow(tracks, max_tolerated_movement=20):
+def plot_follow(tracks, max_tolerated_movement=20, multipletracksets=False):
     """
     Create and save Follow graph, only use center nodes for it
     Expects one node per fish at max: tracks: [fish1_x, fish1_y, fish2_x, fish2_y,..]
                                               [fish1_x, fish1_y, fish2_x, fish2_y,..]
                                               ...
     """
-    assert tracks.shape[-1] % 2 == 0
-    nfish = int(tracks.shape[-1] / 2)
-
     follow = []
-    # for every fish combination calculate the follow
-    for i1 in range(nfish):
-        for i2 in range(i1 + 1, nfish):
-            f1_x, f1_y = get_indices(i1)
-            f2_x, f2_y = get_indices(i2)
-            follow.append(calc_follow(tracks[:, f1_x:f1_y + 1], tracks[:, f2_x:f2_y + 1]))
-            follow.append(calc_follow(tracks[:, f2_x:f2_y + 1], tracks[:, f1_x:f1_y + 1]))
+    if not multipletracksets:
+        assert tracks.shape[-1] % 2 == 0
+        nfish = int(tracks.shape[-1] / 2)
+
+        # for every fish combination calculate the follow
+        for i1 in range(nfish):
+            for i2 in range(i1 + 1, nfish):
+                f1_x, f1_y = get_indices(i1)
+                f2_x, f2_y = get_indices(i2)
+                follow.append(calc_follow(tracks[:, f1_x:f1_y + 1], tracks[:, f2_x:f2_y + 1]))
+                follow.append(calc_follow(tracks[:, f2_x:f2_y + 1], tracks[:, f1_x:f1_y + 1]))
+    else:
+        for trackset in tracks:
+            assert trackset.shape[-1] % 2 == 0
+            nfish = int(trackset.shape[-1] / 2)
+
+            for i1 in range(nfish):
+                for i2 in range(i1 + 1, nfish):
+                    f1_x, f1_y = get_indices(i1)
+                    f2_x, f2_y = get_indices(i2)
+                    follow.append(calc_follow(trackset[:, f1_x:f1_y + 1], trackset[:, f2_x:f2_y + 1]))
+                    follow.append(calc_follow(trackset[:, f2_x:f2_y + 1], trackset[:, f1_x:f1_y + 1]))
 
     follow = np.concatenate(follow, axis=0)
 
@@ -38,25 +50,35 @@ def plot_follow(tracks, max_tolerated_movement=20):
     return fig
 
 
-def plot_iid(tracks):
+def plot_iid( tracks, multipletracksets=False ):
     """
     Create and save iid graph, only use center nodes for it
     Expects one node per fish at max: tracks: [fish1_x, fish1_y, fish2_x, fish2_y,..]
                                               [fish1_x, fish1_y, fish2_x, fish2_y,..]
                                               ...
     """
-    assert tracks.shape[-1] % 2 == 0
-    nfish = int(tracks.shape[-1] / 2)
-
     iid = []
-
-    # for every fish combination calculate iid
-    for i1 in range(nfish):
-        for i2 in range(i1 + 1, nfish):
-            f1_x, f1_y = get_indices(i1)
-            f2_x, f2_y = get_indices(i2)
-            iid.append(calc_iid(tracks[:-1, f1_x:f1_y + 1], tracks[:-1, f2_x:f2_y + 1]))
-            iid.append(iid[-1])
+    if not multipletracksets:
+        assert tracks.shape[-1] % 2 == 0
+        nfish = int(tracks.shape[-1] / 2)
+        # for every fish combination calculate iid
+        for i1 in range(nfish):
+            for i2 in range(i1 + 1, nfish):
+                f1_x, f1_y = get_indices(i1)
+                f2_x, f2_y = get_indices(i2)
+                iid.append(calc_iid(tracks[:-1, f1_x:f1_y + 1], tracks[:-1, f2_x:f2_y + 1]))
+                iid.append(iid[-1])
+    else:
+        for trackset in tracks:
+            assert trackset.shape[-1] % 2 == 0
+            nfish = int(trackset.shape[-1] / 2)
+            # for every fish combination calculate iid
+            for i1 in range(nfish):
+                for i2 in range(i1 + 1, nfish):
+                    f1_x, f1_y = get_indices(i1)
+                    f2_x, f2_y = get_indices(i2)
+                    iid.append(calc_iid(trackset[:-1, f1_x:f1_y + 1], trackset[:-1, f2_x:f2_y + 1]))
+                    iid.append(iid[-1])
 
     iid = np.concatenate(iid, axis=0)
 
@@ -68,7 +90,7 @@ def plot_iid(tracks):
     return fig
 
 
-def plot_follow_iid(tracks):
+def plot_follow_iid(tracks, multipletracksets = False):
     """
     plots fancy graph with follow and iid, only use with center values
     Expects one node per fish at max: tracks: [fish1_x, fish1_y, fish2_x, fish2_y,..]
@@ -76,23 +98,35 @@ def plot_follow_iid(tracks):
                                               ...
     copied from Moritz Maxeiner
     """
-
-    assert tracks.shape[-1] % 2 == 0
-    nfish = int(tracks.shape[-1] / 2)
-
     follow = []
     iid = []
 
-    # for every fish combination calculate the follow
-    for i1 in range(nfish):
-        for i2 in range(i1 + 1, nfish):
-            f1_x, f1_y = get_indices(i1)
-            f2_x, f2_y = get_indices(i2)
-            iid.append(calc_iid(tracks[:-1, f1_x:f1_y + 1], tracks[:-1, f2_x:f2_y + 1]))
-            iid.append(iid[-1])
+    if not multipletracksets:
+        assert tracks.shape[-1] % 2 == 0
+        nfish = int(tracks.shape[-1] / 2)
+        # for every fish combination calculate the follow
+        for i1 in range(nfish):
+            for i2 in range(i1 + 1, nfish):
+                f1_x, f1_y = get_indices(i1)
+                f2_x, f2_y = get_indices(i2)
+                iid.append(calc_iid(tracks[:-1, f1_x:f1_y + 1], tracks[:-1, f2_x:f2_y + 1]))
+                iid.append(iid[-1])
 
-            follow.append(calc_follow(tracks[:, f1_x:f1_y + 1], tracks[:, f2_x:f2_y + 1]))
-            follow.append(calc_follow(tracks[:, f2_x:f2_y + 1], tracks[:, f1_x:f1_y + 1]))
+                follow.append(calc_follow(tracks[:, f1_x:f1_y + 1], tracks[:, f2_x:f2_y + 1]))
+                follow.append(calc_follow(tracks[:, f2_x:f2_y + 1], tracks[:, f1_x:f1_y + 1]))
+    else:
+        for trackset in tracks:
+            assert trackset.shape[-1] % 2 == 0
+            nfish = int(trackset.shape[-1] / 2)
+            for i1 in range(nfish):
+                for i2 in range(i1 + 1, nfish):
+                    f1_x, f1_y = get_indices(i1)
+                    f2_x, f2_y = get_indices(i2)
+                    iid.append(calc_iid(trackset[:-1, f1_x:f1_y + 1], trackset[:-1, f2_x:f2_y + 1]))
+                    iid.append(iid[-1])
+
+                    follow.append(calc_follow(trackset[:, f1_x:f1_y + 1], trackset[:, f2_x:f2_y + 1]))
+                    follow.append(calc_follow(trackset[:, f2_x:f2_y + 1], trackset[:, f1_x:f1_y + 1]))
 
     follow_iid_data = pd.DataFrame(
         {"IID [pixel]": np.concatenate(iid, axis=0), "Follow": np.concatenate(follow, axis=0)}
@@ -108,7 +142,7 @@ def plot_follow_iid(tracks):
     return grid.fig
 
 
-def plot_tlvc_iid(tracks, time_step = (1000/30), tau_seconds=(0.3, 1.3)):
+def plot_tlvc_iid(tracks, time_step = (1000/30), tau_seconds=(0.3, 1.3), multipletracksets = False):
     """
     TLVC_IDD by Moritz Maxeiner
     Expects one node per fish at max: tracks: [fish1_x, fish1_y, fish2_x, fish2_y,..]
@@ -117,27 +151,43 @@ def plot_tlvc_iid(tracks, time_step = (1000/30), tau_seconds=(0.3, 1.3)):
     """
     tau_min_seconds, tau_max_seconds = tau_seconds
 
-    assert tracks.shape[-1] % 2 == 0
-    nfish = int(tracks.shape[-1] / 2)
+    tau_min_frames = int(tau_min_seconds * 1000.0 / time_step)
+    tau_max_frames = int(tau_max_seconds * 1000.0 / time_step)
 
     tlvc = []
     iid = []
 
-    tau_min_frames = int(tau_min_seconds * 1000.0 / time_step)
-    tau_max_frames = int(tau_max_seconds * 1000.0 / time_step)
+    if not multipletracksets:
+        assert tracks.shape[-1] % 2 == 0
+        nfish = int(tracks.shape[-1] / 2)
+        # for every fish combination calculate the follow
+        for i1 in range(nfish):
+            for i2 in range(i1 + 1, nfish):
+                f1_x, f1_y = get_indices(i1)
+                f2_x, f2_y = get_indices(i2)
+                iid.append(calc_iid(tracks[1 : -tau_max_frames + 1, f1_x:f1_y + 1], tracks[1 : -tau_max_frames + 1, f2_x:f2_y + 1]))
+                iid.append(iid[-1])
 
-    # for every fish combination calculate the follow
-    for i1 in range(nfish):
-        for i2 in range(i1 + 1, nfish):
-            f1_x, f1_y = get_indices(i1)
-            f2_x, f2_y = get_indices(i2)
-            iid.append(calc_iid(tracks[1 : -tau_max_frames + 1, f1_x:f1_y + 1], tracks[1 : -tau_max_frames + 1, f2_x:f2_y + 1]))
-            iid.append(iid[-1])
+                a_v = tracks[1:, f1_x:f1_y + 1] - tracks[:-1, f1_x:f1_y + 1]
+                b_v = tracks[1:, f2_x:f2_y + 1] - tracks[:-1, f2_x:f2_y + 1]
+                tlvc.append(calc_tlvc(a_v, b_v, tau_min_frames, tau_max_frames))
+                tlvc.append(calc_tlvc(b_v, a_v, tau_min_frames, tau_max_frames))
+    else:
+        for trackset in tracks:
+            assert trackset.shape[-1] % 2 == 0
+            nfish = int(trackset.shape[-1] / 2)
+            # for every fish combination calculate the follow
+            for i1 in range(nfish):
+                for i2 in range(i1 + 1, nfish):
+                    f1_x, f1_y = get_indices(i1)
+                    f2_x, f2_y = get_indices(i2)
+                    iid.append(calc_iid(trackset[1 : -tau_max_frames + 1, f1_x:f1_y + 1], trackset[1 : -tau_max_frames + 1, f2_x:f2_y + 1]))
+                    iid.append(iid[-1])
 
-            a_v = tracks[1:, f1_x:f1_y + 1] - tracks[:-1, f1_x:f1_y + 1]
-            b_v = tracks[1:, f2_x:f2_y + 1] - tracks[:-1, f2_x:f2_y + 1]
-            tlvc.append(calc_tlvc(a_v, b_v, tau_min_frames, tau_max_frames))
-            tlvc.append(calc_tlvc(b_v, a_v, tau_min_frames, tau_max_frames))
+                    a_v = trackset[1:, f1_x:f1_y + 1] - trackset[:-1, f1_x:f1_y + 1]
+                    b_v = trackset[1:, f2_x:f2_y + 1] - trackset[:-1, f2_x:f2_y + 1]
+                    tlvc.append(calc_tlvc(a_v, b_v, tau_min_frames, tau_max_frames))
+                    tlvc.append(calc_tlvc(b_v, a_v, tau_min_frames, tau_max_frames))
 
     tlvc_iid_data = pd.DataFrame(
         {"IID [pixel]": np.concatenate(iid, axis=0), "TLVC": np.concatenate(tlvc, axis=0)}
@@ -153,21 +203,29 @@ def plot_tlvc_iid(tracks, time_step = (1000/30), tau_seconds=(0.3, 1.3)):
     return grid.fig
 
 
-def plot_tankpositions(tracks):
+def plot_tankpositions( tracks, multipletracksets=False ):
     """
     Heatmap of fishpositions
     By Moritz Maxeiner
     """
-
-    assert tracks.shape[-1] % 2 == 0
-    nfish = int(tracks.shape[-1] / 2)
-
     x_pos = []
     y_pos = []
-    for i1 in range(nfish):
-        f1_x, f1_y = get_indices(i1)
-        x_pos.append( tracks[:, f1_x] )
-        y_pos.append( tracks[:, f1_y] )
+
+    if not multipletracksets:
+        assert tracks.shape[-1] % 2 == 0
+        nfish = int(tracks.shape[-1] / 2)
+        for i1 in range(nfish):
+            f1_x, f1_y = get_indices(i1)
+            x_pos.append( tracks[:, f1_x] )
+            y_pos.append( tracks[:, f1_y] )
+    else:
+        for trackset in tracks:
+            assert trackset.shape[-1] % 2 == 0
+            nfish = int(trackset.shape[-1] / 2)
+            for i1 in range(nfish):
+                f1_x, f1_y = get_indices(i1)
+                x_pos.append( trackset[:, f1_x] )
+                y_pos.append( trackset[:, f1_y] )
 
     x_pos = np.concatenate(x_pos, axis=0)
     y_pos = np.concatenate(y_pos, axis=0)
@@ -180,7 +238,7 @@ def plot_tankpositions(tracks):
     return fig
 
 
-def plot_velocities(tracks):
+def plot_velocities( tracks, clusterfile = None, multipletracksets=False ):
     """
     Plots the velocities
     Expects two nodes per fish exactly: tracks: [head1_x, head1_y, center1_x, center1_y, head2_x, head2_y, center2_x, center2_y,...]
@@ -188,18 +246,39 @@ def plot_velocities(tracks):
                                                 ...
     """
 
-    assert tracks.shape[-1] % 4 == 0
-    nfish = int(tracks.shape[-1] / 4)
+    if clusterfile is not None:
+        cLin, cAng, cOri = readClusters( clusterfile )
 
-    locs = locomotion.getLocomotion(tracks, None)
+    if not multipletracksets:
+        assert tracks.shape[-1] % 4 == 0
+        nfish = int(tracks.shape[-1] / 4)
 
-    # Get dem indices
-    i_lin = [x * 3 for x in range(nfish)]
-    i_ang = [x * 3 + 1 for x in range(nfish)]
-    i_trn = [x * 3 + 2 for x in range(nfish)]
-    linear_velocities = locs[:,i_lin]
-    angular_velocities = locs[:,i_ang]
-    turn_velocities = locs[:,i_trn]
+        locs = locomotion.getLocomotion(tracks, None)
+
+        # Get dem indices
+        i_lin = [x * 3 for x in range(nfish)]
+        i_ang = [x * 3 + 1 for x in range(nfish)]
+        i_trn = [x * 3 + 2 for x in range(nfish)]
+        linear_velocities = locs[:,i_lin]
+        angular_velocities = locs[:,i_ang]
+        turn_velocities = locs[:,i_trn]
+    else:
+        linear_velocities = []
+        angular_velocities = []
+        turn_velocities = []
+        for trackset in tracks:
+            assert trackset.shape[-1] % 4 == 0
+            nfish = int(trackset.shape[-1] / 4)
+
+            locs = locomotion.getLocomotion(trackset, None)
+
+            # Get dem indices
+            i_lin = [x * 3 for x in range(nfish)]
+            i_ang = [x * 3 + 1 for x in range(nfish)]
+            i_trn = [x * 3 + 2 for x in range(nfish)]
+            linear_velocities.append( np.concatenate( locs[:,i_lin] ) )
+            angular_velocities.append( np.concatenate( locs[:,i_ang] ) )
+            turn_velocities.append( np.concatenate( locs[:,i_trn] ) )
 
     angular_velocities = np.concatenate(angular_velocities, axis=0)
     linear_velocities = np.concatenate(linear_velocities, axis=0)
@@ -211,17 +290,23 @@ def plot_velocities(tracks):
     fig_angular, ax = plt.subplots(figsize=(18, 18))
     fig_angular.subplots_adjust(top=0.93)
     ax.set_xlim(-np.pi, np.pi)
-    seaborn.distplot(pd.Series(angular_velocities, name="Angular velocities"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
+    seaborn.distplot(pd.Series(angular_velocities, name="Angular movement"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
+    if clusterfile is not None:
+        seaborn.rugplot(cAng, height=0.03, ax=ax, color="r", linewidth=3)
 
     fig_turn, ax = plt.subplots(figsize=(18, 18))
     fig_turn.subplots_adjust(top=0.93)
     ax.set_xlim(-np.pi, np.pi)
-    seaborn.distplot(pd.Series(turn_velocities, name="Turning velocities"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
+    seaborn.distplot(pd.Series(turn_velocities, name="Orientational movement"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
+    if clusterfile is not None:
+        seaborn.rugplot(cOri, height=0.03, ax=ax, color="r", linewidth=3)
 
     fig_linear, ax = plt.subplots(figsize=(18, 18))
     fig_linear.subplots_adjust(top=0.93)
     ax.set_xlim(-20, 20)
-    seaborn.distplot(pd.Series(linear_velocities, name="Linear velocities"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
+    seaborn.distplot(pd.Series(linear_velocities, name="Linear movement"), ax=ax, hist_kws={"rwidth":0.9, "color":"y"})
+    if clusterfile is not None:
+        seaborn.rugplot(cLin, height=0.03, ax=ax, color="r", linewidth=3)
 
     return fig_linear, fig_angular, fig_turn
 
@@ -281,7 +366,7 @@ def plot_trajectories(tracks, world=(960,720)):
     return fig
 
 
-def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), tau_seconds=(0.3, 1.3) ):
+def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), tau_seconds=(0.3, 1.3), clusterfile = "data/clusters.txt" ):
     """
     For given tracks create all plots in given path
     tracks only is allowed to include one node per fish!
@@ -303,7 +388,7 @@ def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), t
         path = path + "/"
 
     # Extract Center nodes
-    i_center_values = [x for x in range(nfish * 4) if x % 4 < 2]
+    i_center_values = [x for x in range(nfish * 4) if x % 4 > 1]
     tracksCenter = tracks[:,i_center_values]
 
     # make and save graphs
@@ -313,10 +398,10 @@ def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), t
     save_figure(plot_tlvc_iid(tracksCenter, time_step, tau_seconds), path=(path + "tlvc_iid.png"))
     save_figure(plot_tankpositions(tracksCenter), path=(path + "tankpostions.png"), size=(24,18))
     # Velocities
-    lin,ang,trn = plot_velocities(tracks)
-    save_figure(lin, path=(path + "velocities_linear.png") , size=(18, 18))
-    save_figure(ang, path=(path + "velocities_angular.png") , size=(18, 18))
-    save_figure(trn, path=(path + "velocities_trn.png") , size=(18, 18))
+    lin,ang,trn = plot_velocities(tracks, clusterfile=clusterfile)
+    save_figure(lin, path=(path + "locomotion_linear.png") , size=(18, 18))
+    save_figure(ang, path=(path + "locomotion_angular.png") , size=(18, 18))
+    save_figure(trn, path=(path + "locomotion_trn.png") , size=(18, 18))
     # Trajectories
     save_figure(plot_trajectories(tracksCenter), path=(path + "trajectories_all.png"), size=(24,18))
     # Print trajectories for each fish
@@ -324,6 +409,84 @@ def create_plots(tracks, path = "figures/latest_plots", time_step = (1000/30), t
         for f in range(nfish):
             fx, fy = get_indices(f)
             save_figure(plot_trajectories(tracksCenter[:,[fx,fy]]), path=(path + "trajectories_agent" + str(f) + ".png"), size=(24,18))
+
+
+def create_all_plots_together( path="figures/together", clusterfile = "data/clusters.txt" ):
+    """
+    creates plots for all fishdata together
+    """
+
+    # handle dir
+    if not os.path.isdir(path):
+        # create dir
+        try:
+            os.mkdir(path)
+        except OSError:
+            print("Dir Creation failed")
+    if path[-1] != "/":
+        path = path + "/"
+
+    # Load data
+    tracks1 = reader.extract_coordinates( "data/sleap_1_diff2.h5", [b'head',b'center'] )
+    tracks2 = reader.extract_coordinates( "data/sleap_1_diff2.h5", [b'head',b'center'] )
+    tracks3 = reader.extract_coordinates( "data/sleap_1_diff3.h5", [b'head',b'center'] )[0:17000]
+    tracks4 = reader.extract_coordinates( "data/sleap_1_diff4.h5", [b'head',b'center'] )[120:]
+    tracks5 = reader.extract_coordinates( "data/sleap_1_same1.h5", [b'head',b'center'] )
+    tracks6 = reader.extract_coordinates( "data/sleap_1_same3.h5", [b'head',b'center'] )[130:]
+    tracks7 = reader.extract_coordinates( "data/sleap_1_same4.h5", [b'head',b'center'] )
+    tracks8 = reader.extract_coordinates( "data/sleap_1_same5.h5", [b'head',b'center'] )
+
+    # Get Centerpoints
+    nfish = 3
+    isc = [x for x in range(nfish * 4) if x % 4 > 1]
+    tracks1c = tracks1[:,isc]
+    tracks2c = tracks2[:,isc]
+    tracks3c = tracks3[:,isc]
+    tracks4c = tracks4[:,isc]
+    tracks5c = tracks5[:,isc]
+    tracks6c = tracks6[:,isc]
+    tracks7c = tracks7[:,isc]
+    tracks8c = tracks8[:,isc]
+
+    print( "follow_iid" )
+    save_figure( plot_follow_iid( [tracks1c, tracks2c, tracks3c, tracks4c, tracks5c, tracks6c, tracks7c, tracks8c], multipletracksets=True ), path=(path + "follow_iid.png" ) )
+    print( "tlvc_iid" )
+    save_figure( plot_tlvc_iid( [tracks1c, tracks2c, tracks3c, tracks4c, tracks5c, tracks6c, tracks7c, tracks8c], multipletracksets=True ), path=(path + "tlvc_iid.png" ) )
+    print( "follow" )
+    save_figure( plot_follow( [tracks1c, tracks2c, tracks3c, tracks4c, tracks5c, tracks6c, tracks7c, tracks8c], multipletracksets=True ), path=(path + "follow.png" ) )
+    print( "iid" )
+    save_figure( plot_iid( [tracks1c, tracks2c, tracks3c, tracks4c, tracks5c, tracks6c, tracks7c, tracks8c], multipletracksets=True ), path=(path + "iid.png" ) )
+    print( "tankpositions" )
+    save_figure( plot_tankpositions( [tracks1c, tracks2c, tracks3c, tracks4c, tracks5c, tracks6c, tracks7c, tracks8c], multipletracksets=True ), path=(path + "tankpositions.png" ), size=(24,18) )
+    print( "movements/velocities/locomotions")
+    lin, ang, ori = plot_velocities( [tracks1, tracks2, tracks3, tracks4, tracks5, tracks6, tracks7, tracks8], clusterfile=clusterfile, multipletracksets=True )
+    #lin, ang, ori = plot_velocities( [tracks, tracks2], multipletracksets=True )
+    save_figure( lin, path=(path + "locomotion_linear.png" ), size=(18, 18) )
+    save_figure( ang, path=(path + "locomotion_angular.png" ), size=(18, 18) )
+    save_figure( ori, path=(path + "locomotion_orientation.png" ), size=(18, 18) )
+
+
+def create_all_plots_separate( clusterfile = "data/clusters.txt" ):
+    """
+    Creates plots for every video seperatly
+    """
+    tracks1 = reader.extract_coordinates( "data/sleap_1_diff1.h5", [b'head',b'center'] )
+    tracks2 = reader.extract_coordinates( "data/sleap_1_diff2.h5", [b'head',b'center'] )
+    tracks3 = reader.extract_coordinates( "data/sleap_1_diff3.h5", [b'head',b'center'] )[0:17000]
+    tracks4 = reader.extract_coordinates( "data/sleap_1_diff4.h5", [b'head',b'center'] )[120:]
+    tracks5 = reader.extract_coordinates( "data/sleap_1_same1.h5", [b'head',b'center'] )
+    tracks6 = reader.extract_coordinates( "data/sleap_1_same3.h5", [b'head',b'center'] )[130:]
+    tracks7 = reader.extract_coordinates( "data/sleap_1_same4.h5", [b'head',b'center'] )
+    tracks8 = reader.extract_coordinates( "data/sleap_1_same5.h5", [b'head',b'center'] )
+
+    create_plots( tracks1, path="figures/diff1", clusterfile="data/clusters.txt" )
+    create_plots( tracks2, path="figures/diff2", clusterfile="data/clusters.txt" )
+    create_plots( tracks3, path="figures/diff3", clusterfile="data/clusters.txt" )
+    create_plots( tracks4, path="figures/diff4", clusterfile="data/clusters.txt" )
+    create_plots( tracks5, path="figures/same1", clusterfile="data/clusters.txt" )
+    create_plots( tracks6, path="figures/same3", clusterfile="data/clusters.txt" )
+    create_plots( tracks7, path="figures/same4", clusterfile="data/clusters.txt" )
+    create_plots( tracks8, path="figures/same5", clusterfile="data/clusters.txt" )
 
 
 def save_figure(fig, path = "figures/latest_plot.png", size = (25, 12.5)):
@@ -374,11 +537,9 @@ def animate_positions(track, track2 = None):
 
 
 def main():
-    file = "data/sleap_1_diff1.h5"
-    tracks = reader.extract_coordinates(file, [b'head',b'center'])
 
-    create_plots(tracks)
-
+    # create_all_plots_together()
+    create_all_plots_separate()
 
 if __name__ == "__main__":
     main()
