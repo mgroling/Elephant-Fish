@@ -168,9 +168,24 @@ def updateLocomotions():
     getLocomotion( extract_coordinates( "data/sleap_1_same4.h5", [b'head',b'center'], fish_to_extract=[0,1,2]), "data/locomotion_data_same4.csv" )
     getLocomotion( extract_coordinates( "data/sleap_1_same5.h5", [b'head',b'center'], fish_to_extract=[0,1,2]), "data/locomotion_data_same5.csv" )
 
+def updateLocomotionBin():
+    """
+    Update all locomotion_bin files
+    """
+    convertLocmotionToBin(pd.read_csv("data/locomotion_data_diff1.csv", sep = ";").to_numpy(), "data/clusters.txt", "data/locomotion_data_bin_diff1.csv")
+    convertLocmotionToBin(pd.read_csv("data/locomotion_data_diff2.csv", sep = ";").to_numpy(), "data/clusters.txt", "data/locomotion_data_bin_diff2.csv")
+    convertLocmotionToBin(pd.read_csv("data/locomotion_data_diff3.csv", sep = ";").to_numpy(), "data/clusters.txt", "data/locomotion_data_bin_diff3.csv")
+    convertLocmotionToBin(pd.read_csv("data/locomotion_data_diff4.csv", sep = ";").to_numpy(), "data/clusters.txt", "data/locomotion_data_bin_diff4.csv")
+    convertLocmotionToBin(pd.read_csv("data/locomotion_data_same1.csv", sep = ";").to_numpy(), "data/clusters.txt", "data/locomotion_data_bin_same1.csv")
+    convertLocmotionToBin(pd.read_csv("data/locomotion_data_same3.csv", sep = ";").to_numpy(), "data/clusters.txt", "data/locomotion_data_bin_same3.csv")
+    convertLocmotionToBin(pd.read_csv("data/locomotion_data_same4.csv", sep = ";").to_numpy(), "data/clusters.txt", "data/locomotion_data_bin_same4.csv")
+    convertLocmotionToBin(pd.read_csv("data/locomotion_data_same5.csv", sep = ";").to_numpy(), "data/clusters.txt", "data/locomotion_data_bin_same5.csv")
+
 def main():
 
-    updateLocomotions()
+    # updateLocomotions()
+
+    updateLocomotionBin()
 
     # get locomotion
     # df = pd.read_csv("data/locomotion_data_diff2.csv", sep = ";")
