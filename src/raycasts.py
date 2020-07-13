@@ -11,7 +11,7 @@ class Raycast:
         Initialize Raycast Object.
         Wall lines is expected to be a list of lists which contain lines, defined by 4 coordinates (first_point_x, first_point_y, second_point_x, second_point_y).
         Radius variables should be given in (0,360) and other variables should be positive integers.
-        Angles relative to a fish are seen that from the direction the fish is looking at, 30° to the right are 30° relative to the fish and 30° to the left are 330° relative to the fish.
+        Angles relative to a fish are seen that from the direction the fish is looking at, 30° to the right are 330° relative to the fish and 30° to the left are 30° relative to the fish.
         """
         self._wall_lines = wall_lines
         self._agent_rays = count_bins_agents
@@ -141,7 +141,7 @@ def main():
 
     file = "data/sleap_1_same5.h5"
 
-    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])[0:17000]
+    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])[:]
 
     print("shape:",temp.shape)
 
