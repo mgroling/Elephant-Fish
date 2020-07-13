@@ -67,7 +67,7 @@ same_5: entire video
 
 ## Bin Representation of Locomotion
 
-For our model input and output of locomotion was in the form of bin representation.\n
+For our model input and output of locomotion was in the form of bin representation.\
 This means that a given locomotion, e.g. linear movement of 3 is matched to bins, say bin 2 and 5 where 2 has a higher percentage cause it represents the locomotion better.
 We used this form of locomotion representation because movement of fishes is not deterministic and we wanted some way of portraying that.
 However this leaves one with a decision to which bin centers should be used and how many one should use.
