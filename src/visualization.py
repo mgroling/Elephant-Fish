@@ -82,6 +82,7 @@ def addTracksOnVideo( inputvideo, outputvideo, tracks, nfish = 3, fps=30, dimens
         i += 1
 
     cap.release()
+    out.release()
     cv2.destroyAllWindows()
 
     if i < row - 1:
@@ -140,6 +141,7 @@ def addTracksOnTank( outputvideo, tracks, tank="data/tank.png", nfish = 3, fps=3
                 break
         i += 1
 
+    out.release()
     cv2.destroyAllWindows()
 
 

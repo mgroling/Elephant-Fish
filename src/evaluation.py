@@ -5,6 +5,7 @@ import seaborn
 import os
 import reader
 import locomotion
+import visualization
 from analysis import *
 from functions import *
 
@@ -547,7 +548,8 @@ def main():
     polarTracks = np.array([[408.4131257097944, 321.88652359668686, 5.412909238431337, 366.9314135974851, 229.4614791656282, 0.406224943954624, 516.1784567524802, 535.9983967334214, 2.52111734298587]])
     startpositions = convPolarToCart( polarTracks, distances )[0]
     tracks = locomotion.convLocToCart( loc, startpositions )
-    create_plots( tracks, path="figures/simulation" )
+    # create_plots( tracks, path="figures/simulation" )
+    visualization.addTracksOnTank( "C:/Users/Gabriel/Videos/sim_tracks.avi", tracks[0:500], skeleton=[(0,1)], showvid=False )
 
 if __name__ == "__main__":
     main()
