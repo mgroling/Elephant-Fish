@@ -135,9 +135,6 @@ def addTracksOnTank( outputvideo, tracks, tank="data/tank.png", nfish = 3, fps=3
         if showvid:
             cv2.imshow( 'fishy fish fish', frame )
             cv2.waitKey(0)
-        else:
-            print( "end of video" )
-            break
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
