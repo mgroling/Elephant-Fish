@@ -258,13 +258,10 @@ def getAngles( v1, v2 ):
     """
     assert v1.shape == v2.shape
     assert v1.shape[1] == 2
-    sp = np.sum( v1 * v2, axis=1 )
-    u = np.linalg.norm( v1, axis=1 ) * np.linalg.norm( v2, axis=1 )
-    # Take care if small miscalculations take place (eg angle between same vectors)
-    arg = np.clip( sp / u, -1.0, 1.0 )
-    ang = np.arccos( arg )
-    ang[np.where(arg < 0)] = np.pi + ang[np.where(arg < 0)]
-    return ang
+    dot = np.sum( v1 * v2, axis=1 )
+    det = np.subtract( ( v1[:,0] * v2[:,1] ), ( v2[:,0] * v1[:,1] ) )
+    angle = np.arctan2( det, dot )
+    return angle % ( np.pi * 2 )
 
 
 def getDistances( p1, p2 ):

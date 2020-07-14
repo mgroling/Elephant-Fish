@@ -202,20 +202,26 @@ def getnLoc( tracks, nnodes, nfish=3 ):
     assert cols >= 4 * nfish
     assert rows > 1
     assert nnodes >= 1
+    if nnodes > 1:
+        assert cols // 2 // nfish == nnodes
+        nnodesT = nnodes
+    else:
+        nnodesT = 2
 
     nf = nnodes * 2 + 1 # entries per fish
     out = np.empty( ( rows - 1, nf * nfish ) )
+
     for f in range(nfish):
         ## Set first 3 entries
-        head_next = tracks[1:,[4 * f, 4 * f + 1]]
-        center_next = tracks[1:,[4 * f + 2, 4 * f + 3]]
+        head_next = tracks[1:,[nnodesT * 2 * f, nnodesT * 2 * f + 1]]
+        center_next = tracks[1:,[nnodesT * 2 * f + 2, nnodesT * 2 * f + 3]]
         # head - center
-        vec_look = tracks[:-1,[4 * f, 4 * f + 1]] - tracks[:-1,[4 * f + 2, 4 * f + 3]]
+        vec_look = tracks[:-1,[nnodesT * 2 * f, nnodesT * 2 * f + 1]] - tracks[:-1,[nnodesT * 2 * f + 2, nnodesT * 2 * f + 3]]
         # head - center
         vec_look_next = head_next - center_next
         # center_next - center
-        vec_next = center_next - tracks[:-1,[4 * f + 2, 4 * f + 3]]
-        out[:,nf * f] = get_distances( tracks[:,[4 * f + 2, 4 * f + 3]] )[:,0]
+        vec_next = center_next - tracks[:-1,[nnodesT * 2 * f + 2, nnodesT * 2 * f + 3]]
+        out[:,nf * f] = get_distances( tracks[:,[nnodesT * 2 * f + 2, nnodesT * 2 * f + 3]] )[:,0]
         out[:,nf * f + 1] = getAngles( vec_look, vec_next )
         out[:,nf * f + 2] = getAngles( vec_look, vec_look_next )
         ## Set every other node in relation to orientation and center node
@@ -228,7 +234,7 @@ def getnLoc( tracks, nnodes, nfish=3 ):
                 # Since the new orientation is exactly the angle o the vector between head and center
                 out[:,ix + 2 * n + 1] = 0
             else:
-                node_next = tracks[1:,[4 * f + 2 + 2 * n, 4 * f + 2 + 2 * n + 1]]
+                node_next = tracks[1:,[nnodesT * 2 * f + 2 + 2 * n, nnodesT * 2 * f + 2 + 2 * n + 1]]
                 vec_cn_next = node_next - center_next
                 out[:,ix + 2 * n] = getDistances( center_next, node_next )
                 out[:,ix + 2 * n + 1] = getAngles( vec_look_next, vec_cn_next )
@@ -249,8 +255,19 @@ def main():
     # convLocToCart( loc, [282.05801392, 85.2730484, 278.16235352, 112.26922607, 396.72821045, 223.87356567, 388.54510498, 198.40411377, 345.84439087, 438.7845459, 325.3197937, 426.67755127] )
 
     # convertLocmotionToBin(loco, "data/clusters.txt", "data/locomotion_data_bin_diff4.csv")
-    tracks = extract_coordinates( "data/sleap_1_diff1.h5", [b'head', b'center'] )
-    getnLoc( tracks, 2 )
+    tracks = extract_coordinates( "data/sleap_1_diff1.h5", [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'] )
+    # tracks = extract_coordinates( "data/sleap_1_diff1.h5", [b'head', b'center'] )
+
+    loc = getnLoc( tracks, 10 )
+    print( np.amax( loc, axis = 0 ))
+    print( np.amin( loc, axis = 0 ))
+    print( np.mean( loc, axis = 0 ))
+    print( np.where( loc > 67 ) )
+    print( loc[:,40] )
+    print( loc.shape )
+
+    print( tracks[0,20:41] )
+    # print( tracks[11919] )
 
 
 if __name__ == "__main__":
