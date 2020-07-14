@@ -146,7 +146,9 @@ If only given center and head values, you can use
 ```
 to add static positions for the fish.
 
-# 10 Node Model
+# n Node Model
+
+n stands for the amount of nodes
 
 ## The nloc model
 
@@ -156,7 +158,23 @@ Datastructure to represent movement. n stands for the amount of nodes per fish
 * The rest (n - 1) * 2 arguments are the distance and orientation to the center node
 
 This is how an nloc array looks:
-` [ [f1_lin, f1_ang, f1_ori, f1_1_dis, d1_1_ori, f1_2_dis, f1_2_ori, ..., f2_lin, f2_ang, f2_ori, ...], ... ]`
+```
+[
+    [f1_lin, f1_ang, f1_ori, f1_1_dis, d1_1_ori, f1_2_dis, f1_2_ori, ..., f2_lin, f2_ang, f2_ori, ... ]
+    ...
+]
+```
+
+## The nView
+
+Datastructure to represent the view of a fish. A fish in the n Node Model views n nodes for every other fish. This is possible since we are only using 3 fishes constantly.
+
+This is how an nView array looks like for fish1:
+```
+[
+    [f2_n1_x, f2_n1_y, f2_n2_x, f2_n2_y, ..., f3_n1_x, f3_n1_y, ...]
+]
+```
 
 ## Input
 
