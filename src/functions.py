@@ -250,3 +250,24 @@ def readStartposition(path):
             polarTracks.append(content[i*4+3])
 
     return polarTracks, distances
+
+
+def getAngles( v1, v2 ):
+    """
+    Takes 2 np.arrays with points treated as vectors
+    """
+    assert v1.shape == v2.shape
+    assert v1.shape[1] == 2
+    sp = np.sum( v1 * v2, axis=1 )
+    u = np.linalg.norm( v1, axis=1 ) * np.linalg.norm( v2, axis=1 )
+    # Take care if small miscalculations take place (eg angle between same vectors)
+    arg = (sp / u)
+    arg[np.where(arg > 1)] = 1
+    return np.arccos( arg )
+
+
+def getDistances( p1, p2 ):
+    """
+    Takes 2 np.arrays with points, returns the distances
+    """
+    return np.linalg.norm( p1 - p2, axis=1 )
