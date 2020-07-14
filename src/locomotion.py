@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import math
-from functions import getAngle, getDistance, readClusters, distancesToClusters, softmax, get_indices, convPolarToCart
+from functions import getAngle, getDistance, readClusters, distancesToClusters, softmax, get_indices, convPolarToCart, get_distances, getAngles, getDistances
 from itertools import chain
 from reader import *
 from sklearn.cluster import KMeans
@@ -181,11 +181,65 @@ def updateLocomotionBin():
     convertLocmotionToBin(pd.read_csv("data/locomotion_data_same4.csv", sep = ";").to_numpy(), "data/clusters.txt", "data/locomotion_data_bin_same4.csv")
     convertLocmotionToBin(pd.read_csv("data/locomotion_data_same5.csv", sep = ";").to_numpy(), "data/clusters.txt", "data/locomotion_data_bin_same5.csv")
 
+
+def getnLoc( tracks, nnodes, nfish=3 ):
+    """
+    Computes Locomotion for n nodes
+    tracks:
+        Trackset, expects head and center at least:
+        [
+            [head1_x, head2_y, center1_x, center1_x, ..., head2_x, ...]
+            ...
+        ]
+    n:
+        Amount of nodes per fish, n >= 2
+    output:
+        [
+            [ori]
+        ]
+    """
+    rows, cols = tracks.shape
+    assert cols >= 4 * nfish
+    assert rows > 1
+    assert nnodes >= 1
+
+    nf = nnodes * 2 + 1 # entries per fish
+    out = np.empty( ( rows - 1, nf * nfish ) )
+    for f in range(nfish):
+        ## Set first 3 entries
+        head_next = tracks[1:,[4 * f, 4 * f + 1]]
+        center_next = tracks[1:,[4 * f + 2, 4 * f + 3]]
+        # head - center
+        vec_look = tracks[:-1,[4 * f, 4 * f + 1]] - tracks[:-1,[4 * f + 2, 4 * f + 3]]
+        # head - center
+        vec_look_next = head_next - center_next
+        # center_next - center
+        vec_next = center_next - tracks[:-1,[4 * f + 2, 4 * f + 3]]
+        out[:,nf * f] = get_distances( tracks[:,[4 * f + 2, 4 * f + 3]] )[:,0]
+        out[:,nf * f + 1] = getAngles( vec_look, vec_next )
+        out[:,nf * f + 2] = getAngles( vec_look, vec_look_next )
+        ## Set every other node in relation to orientation and center node
+        for n in range( nnodes - 1 ):
+            # since head is at the first position...
+            ix = nf * f + 3
+            if n == 0:
+                vec_ch_next = head_next - center_next
+                out[:,ix + 2 * n] = getDistances( center_next, head_next )
+                out[:,ix + 2 * n + 1] = getAngles( vec_look_next, vec_ch_next )
+            else:
+                node_next = tracks[1:,[4 * f + 2 + 2 * n, 4 * f + 2 + 2 * n + 1]]
+                vec_cn_next = node_next - center_next
+                out[:,ix + 2 * n] = getDistances( center_next, node_next )
+                out[:,ix + 2 * n + 1] = getAngles( vec_look_next, vec_cn_next )
+
+    print( out )
+
+
 def main():
 
     # updateLocomotions()
 
-    updateLocomotionBin()
+    # updateLocomotionBin()
 
     # get locomotion
     # df = pd.read_csv("data/locomotion_data_diff2.csv", sep = ";")
@@ -194,6 +248,9 @@ def main():
     # convLocToCart( loc, [282.05801392, 85.2730484, 278.16235352, 112.26922607, 396.72821045, 223.87356567, 388.54510498, 198.40411377, 345.84439087, 438.7845459, 325.3197937, 426.67755127] )
 
     # convertLocmotionToBin(loco, "data/clusters.txt", "data/locomotion_data_bin_diff4.csv")
+    tracks = extract_coordinates( "data/sleap_1_diff1.h5", [b'head', b'center'] )
+    getnLoc( tracks, 2 )
+
 
 if __name__ == "__main__":
     main()
