@@ -26,8 +26,8 @@ def getnView( tracksFish, tracksOther, nfish=3 ):
             ixy = [nnodes * f + 2 * n, nnodes * f + 2 * n + 1]
             # node - center
             vec_cn = tracksOther[:,ixy] - center
-            out[:,2 * f + 2 * n] = getDistances( tracksOther[:,ixy], center )
-            out[:,2 * f + 2 * n + 1] = getAngles( vec_ch, vec_cn )
+            out[:,nnodes * 2 * f + 2 * n] = getDistances( tracksOther[:,ixy], center )
+            out[:,nnodes * 2 * f + 2 * n + 1] = getAngles( vec_ch, vec_cn )
 
     return out
 
