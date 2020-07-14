@@ -1,8 +1,13 @@
 # Python file for the nmodel
 import numpy as np
 import pandas as pd
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+
 from functions import getDistances, getAngles
 from reader import extract_coordinates
+from locomotion import getnLoc
 
 def getnView( tracksFish, tracksOther, nfish=3 ):
     """
@@ -33,19 +38,105 @@ def getnView( tracksFish, tracksOther, nfish=3 ):
     return out
 
 
-def stealWallRays( path, COUNT_RAYS_WALLS=15 ):
+def stealWallRays( path, COUNT_RAYS_WALLS=15, nfish=3 ):
     """
     Steals wall rays from raycast data
     """
     raycasts = pd.read_csv( path, sep = ";" ).to_numpy()
-    return raycasts[:,-15:]
+    return raycasts[:,-15 * nfish:]
+
+
+def createNetwork( BATCH_SIZE=10, SEQ_LEN=75, COUNT_RAYS_WALLS=15, N_FISH=3, N_NODES=4 ):
+    """
+    Creates and returns an RNN model
+    """
+    N_VIEWS =  (N_FISH - 1 ) * N_NODES * 2
+    N_LOC = N_NODES * 2 + 1
+    dimdata = N_VIEWS + COUNT_RAYS_WALLS + N_LOC
+    n_outputlayer = N_NODES * 20 + 20
+    # (batch,)
+    ishape = ( BATCH_SIZE, SEQ_LEN, dimdata )
+
+    model = keras.Sequential()
+    model.add( layers.InputLayer( batch_input_shape=ishape ) )
+    model.add( layers.LSTM(dimdata) )
+    # model.add( layers.Dense( 100 ) )
+    model.add( layers.Dense( n_outputlayer ) )
+    model.summary()
+    return model
+
+
+def trainNetwork( network, nLoc, nView, wallRays, BATCH_SIZE=10, SEQ_LEN=75, COUNT_RAYS_WALLS=15, N_FISH=3, N_NODES=4 ):
+    pass
+
+
+def multivariate_data( dataset, target, start_index, end_index, history_size, target_size, step, single_step=False ):
+    """
+    Taken from https://www.tensorflow.org/tutorials/structured_data/time_series
+    """
+    data = []
+    labels = []
+
+    start_index = start_index + history_size
+    if end_index is None:
+        end_index = len( dataset ) - target_size
+
+    for i in range( start_index, end_index ):
+        indices = range( i - history_size, i, step )
+        data.append( dataset[indices] )
+
+        if single_step:
+            labels.append( target[i + target_size] )
+        else:
+            labels.append( target[i:i + target_size] )
+
+    return np.array( data ), np.array( labels )
+
+
+def getData( TRAINSPLIT ):
+    """
+    Full Manual Frankencode now
+    """
+    tracks = extract_coordinates( "data/sleap_1_diff1.h5", [b'head', b'center', b'tail_basis', b'tail_end'] )
+    nLoc = getnLoc( tracks, nnodes=4, nfish=3 )
+    nView = getnView( tracks[:,0:4], tracks[:,8:], nfish=3 )
+    wallrays = stealWallRays( "data/raycast_data_diff1.csv", COUNT_RAYS_WALLS=15, nfish=3 )[:,0:15]
+    rowsLoc, colsLoc = nLoc.shape
+    data = np.empty( ( rowsLoc + 1, colsLoc + nView.shape[-1] + wallrays.shape[-1] ) )
+    data[:,0:nView.shape[-1]] = nView
+    data[:,nView.shape[-1]:-colsLoc] = wallrays
+    # duplicate loc at beginning ( i know i know ... )
+    data[0:,-colsLoc:] = nLoc[0]
+    data[1:,-colsLoc:] = nLoc
+    data = data[:-1]
+
+    # Standardize data
+    data_mean = data[:TRAINSPLIT].mean( axis=0 )
+    data_std = data[:TRAINSPLIT].std( axis=0 )
+    data = ( data - data_mean ) / data_std
+    target = ( nLoc - data_mean[-colsLoc:] ) / data_std[-colsLoc:]
+    return np.nan_to_num( data ) , np.nan_to_num( target )
 
 
 def main():
-    tracks = extract_coordinates( "data/sleap_1_diff1.h5", [b'head', b'center', b'tail_basis'] )
-    print( tracks[0] )
-    print( getnView( tracks[:,0:4], tracks[:,6:] )[0] )
-    print( stealWallRays( "data/raycast_data_diff1.csv" ).shape )
+    TRAINSPLIT = 15000
+    BATCH_SIZE = 10
+    BUFFER_SIZE= 10000
+    HIST_SIZE = 70 # frames to be looked on
+    TARGET_SIZE = 0
+
+
+    data, target = getData( TRAINSPLIT )
+
+    x_train, y_train = multivariate_data( data, target, 0, TRAINSPLIT, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
+    x_val, y_val = multivariate_data( data, target, TRAINSPLIT, None, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
+    print( "Single entry shape: {}".format( x_train[0].shape ) )
+
+    train_multivariate = tf.data.Dataset.from_tensor_slices( ( x_train, y_train ) )
+    train_multivariate = train_multivariate.cache().shuffle( BUFFER_SIZE ).batch( BATCH_SIZE ).repeat()
+
+
+    # model = createNetwork()
 
 if __name__ == "__main__":
     main()

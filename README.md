@@ -180,8 +180,8 @@ This is how an nView array looks like for fish1:
 ## Input
 
 The fish gets as input:
-* Locomotion Output Last time step
-* All 10 nodes from the other fish
-* The nloc for that timestep
+* Wall rays
+* nView
+* nLoc from previos timestep
 The fish gives as output:
 * The nloc for that timestep
