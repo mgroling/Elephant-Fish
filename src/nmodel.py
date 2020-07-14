@@ -1,5 +1,6 @@
 # Python file for the nmodel
 import numpy as np
+import pandas as pd
 from functions import getDistances, getAngles
 from reader import extract_coordinates
 
@@ -32,10 +33,19 @@ def getnView( tracksFish, tracksOther, nfish=3 ):
     return out
 
 
+def stealWallRays( path, COUNT_RAYS_WALLS=15 ):
+    """
+    Steals wall rays from raycast data
+    """
+    raycasts = pd.read_csv( path, sep = ";" ).to_numpy()
+    return raycasts[:,-15:]
+
+
 def main():
-    tracks = extract_coordinates( "data/sleap_1_diff1.h5", [b'head', b'center'] )
+    tracks = extract_coordinates( "data/sleap_1_diff1.h5", [b'head', b'center', b'tail_basis'] )
     print( tracks[0] )
-    print( getnView( tracks[:,0:4], tracks[:,4:] )[0] )
+    print( getnView( tracks[:,0:4], tracks[:,6:] )[0] )
+    print( stealWallRays( "data/raycast_data_diff1.csv" ).shape )
 
 if __name__ == "__main__":
     main()
