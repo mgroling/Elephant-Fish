@@ -102,19 +102,20 @@ def getData( TRAINSPLIT ):
     nView = getnView( tracks[:,0:4], tracks[:,8:], nfish=3 )
     wallrays = stealWallRays( "data/raycast_data_diff1.csv", COUNT_RAYS_WALLS=15, nfish=3 )[:,0:15]
     rowsLoc, colsLoc = nLoc.shape
-    data = np.empty( ( rowsLoc + 1, colsLoc + nView.shape[-1] + wallrays.shape[-1] ) )
+    f1Loc = colsLoc // 3
+    data = np.empty( ( rowsLoc + 1, f1Loc + nView.shape[-1] + wallrays.shape[-1] ) )
     data[:,0:nView.shape[-1]] = nView
-    data[:,nView.shape[-1]:-colsLoc] = wallrays
+    data[:,nView.shape[-1]:-f1Loc] = wallrays
     # duplicate loc at beginning ( i know i know ... )
-    data[0:,-colsLoc:] = nLoc[0]
-    data[1:,-colsLoc:] = nLoc
+    data[0:,-f1Loc:] = nLoc[0,:f1Loc]
+    data[1:,-f1Loc:] = nLoc[:,:f1Loc]
     data = data[:-1]
 
     # Standardize data
     data_mean = data[:TRAINSPLIT].mean( axis=0 )
     data_std = data[:TRAINSPLIT].std( axis=0 )
     data = ( data - data_mean ) / data_std
-    target = ( nLoc - data_mean[-colsLoc:] ) / data_std[-colsLoc:]
+    target = ( nLoc[:,:f1Loc] - data_mean[-f1Loc:] ) / data_std[-f1Loc:]
     return np.nan_to_num( data ) , np.nan_to_num( target )
 
 
@@ -122,8 +123,15 @@ def main():
     TRAINSPLIT = 15000
     BATCH_SIZE = 10
     BUFFER_SIZE= 10000
-    HIST_SIZE = 70 # frames to be looked on
+    HIST_SIZE = 70 # frames to be looked on or SEQ_LEN
     TARGET_SIZE = 0
+    N_NODES = 4
+    N_FISH = 3
+    N_WRAYS = 15
+    N_VIEWS =  (N_FISH - 1 ) * N_NODES * 2
+    D_LOC = N_NODES * 2 + 1
+    D_DATA = N_VIEWS + N_WRAYS + D_LOC
+    D_OUT = N_NODES * 20 + 20
 
 
     data, target = getData( TRAINSPLIT )
@@ -132,11 +140,17 @@ def main():
     x_val, y_val = multivariate_data( data, target, TRAINSPLIT, None, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
     print( "Single entry shape: {}".format( x_train[0].shape ) )
 
-    train_multivariate = tf.data.Dataset.from_tensor_slices( ( x_train, y_train ) )
-    train_multivariate = train_multivariate.cache().shuffle( BUFFER_SIZE ).batch( BATCH_SIZE ).repeat()
+    train_data = tf.data.Dataset.from_tensor_slices( ( x_train, y_train ) )
+    train_data = train_data.cache().shuffle( BUFFER_SIZE ).batch( BATCH_SIZE ).repeat()
 
+    val_data = tf.data.Dataset.from_tensor_slices( ( x_val, y_val ) )
+    val_data = val_data.batch( BATCH_SIZE ).repeat()
 
-    # model = createNetwork()
+    nmodel = tf.keras.models.Sequential()
+    print( "prediction: ({}, {})".format( HIST_SIZE, D_DATA ) )
+    print( x_train.shape )
+    print( x_train.shape[-2:] )
+    nmodel.add( tf.keras.layers.LSTM( D_DATA * 2, input_shape=x_train.shape[-2:] ) )
 
 if __name__ == "__main__":
     main()
