@@ -168,11 +168,12 @@ This is how an nloc array looks:
 ## The nView
 
 Datastructure to represent the view of a fish. A fish in the n Node Model views n nodes for every other fish. This is possible since we are only using 3 fishes constantly.
+The nView vector saves the distances and angles from the center of the fish to the n nodes of every other fish.
 
 This is how an nView array looks like for fish1:
 ```
 [
-    [f2_n1_x, f2_n1_y, f2_n2_x, f2_n2_y, ..., f3_n1_x, f3_n1_y, ...]
+    [f2_n1_dis, f2_n1_ang, f2_n2_dis, f2_n2_ang, ..., f3_n1_dis, f3_n1_ang, ...]
 ]
 ```
 
