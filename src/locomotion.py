@@ -225,14 +225,15 @@ def getnLoc( tracks, nnodes, nfish=3 ):
             if n == 0:
                 vec_ch_next = head_next - center_next
                 out[:,ix + 2 * n] = getDistances( center_next, head_next )
-                out[:,ix + 2 * n + 1] = getAngles( vec_look_next, vec_ch_next )
+                # Since the new orientation is exactly the angle o the vector between head and center
+                out[:,ix + 2 * n + 1] = 0
             else:
                 node_next = tracks[1:,[4 * f + 2 + 2 * n, 4 * f + 2 + 2 * n + 1]]
                 vec_cn_next = node_next - center_next
                 out[:,ix + 2 * n] = getDistances( center_next, node_next )
                 out[:,ix + 2 * n + 1] = getAngles( vec_look_next, vec_cn_next )
 
-    print( out )
+    return out
 
 
 def main():
