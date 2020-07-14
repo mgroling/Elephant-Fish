@@ -261,9 +261,10 @@ def getAngles( v1, v2 ):
     sp = np.sum( v1 * v2, axis=1 )
     u = np.linalg.norm( v1, axis=1 ) * np.linalg.norm( v2, axis=1 )
     # Take care if small miscalculations take place (eg angle between same vectors)
-    arg = (sp / u)
-    arg[np.where(arg > 1)] = 1
-    return np.arccos( arg )
+    arg = np.clip( sp / u, -1.0, 1.0 )
+    ang = np.arccos( arg )
+    ang[np.where(arg < 0)] = np.pi + ang[np.where(arg < 0)]
+    return ang
 
 
 def getDistances( p1, p2 ):
