@@ -62,7 +62,7 @@ class Simulation:
         raycasts = df.to_numpy()
 
         if self.verbose >= 1:
-            print("started training on " + locomotion_path[-9:-4])
+            print("Started training on " + locomotion_path[-9:-4])
 
         for i in range(0, self._count_agents):
             for subtrack in range(0, int(len(locomotion)/subtrack_length)+1):
@@ -109,7 +109,7 @@ class Simulation:
                 #cur_pos right now is x_head, y_head, length angle from look_vector to pos_x_axis
                 cur_pos.append([x_center, y_center, length, angle_rad])
                 #take locomotion of first self._count_agents subtracks first locomotion
-                locomotion[i] = self._last_train_X[i][:, :, 0:sum(list(self._clusters_counts))].reshape(1, sum(list(self._clusters_counts)))
+                locomotion[i] = np.zeros((1, sum(list(self._clusters_counts))))
         elif start == "last_train":
             # cur_pos = #todo (no priority though)
             # cur_X = self._last_train_X
@@ -192,7 +192,7 @@ class Simulation:
 
             tracks[i] = new_row
 
-        if verbose >= 1:
+        if self.verbose >= 1:
             print("fish tried to move " + str(out_of_tank) + " times out tank")
 
         df = pd.DataFrame(data = tracks, columns = tracks_header[0])
@@ -260,18 +260,15 @@ def main():
     model.add(Dense(sum(list(CLUSTER_COUNTS))))
     model.compile(loss='mean_squared_error', optimizer='adam')
 
-    sim = Simulation(COUNT_BINS_AGENTS, COUNT_RAYS_WALLS, RADIUS_FIELD_OF_VIEW_WALLS, RADIUS_FIELD_OF_VIEW_AGENTS, MAX_VIEW_RANGE, COUNT_FISHES, "data/clusters.txt")
+    sim = Simulation(COUNT_BINS_AGENTS, COUNT_RAYS_WALLS, RADIUS_FIELD_OF_VIEW_WALLS, RADIUS_FIELD_OF_VIEW_AGENTS, MAX_VIEW_RANGE, COUNT_FISHES, "data/clusters.txt", verbose = 2)
     sim.setModel(model)
     sim.trainNetwork("data/locomotion_data_bin_diff1.csv", "data/raycast_data_diff1.csv", 6000, 10, 10)
-    sim.trainNetwork("data/locomotion_data_bin_diff2.csv", "data/raycast_data_diff2.csv", 6000, 10, 10)
-    sim.trainNetwork("data/locomotion_data_bin_diff3.csv", "data/raycast_data_diff3.csv", 6000, 10, 10)
-    sim.trainNetwork("data/locomotion_data_bin_diff4.csv", "data/raycast_data_diff4.csv", 6000, 10, 10)
+    # sim.trainNetwork("data/locomotion_data_bin_diff2.csv", "data/raycast_data_diff2.csv", 6000, 10, 10)
+    # sim.trainNetwork("data/locomotion_data_bin_diff3.csv", "data/raycast_data_diff3.csv", 6000, 10, 10)
+    # sim.trainNetwork("data/locomotion_data_bin_diff4.csv", "data/raycast_data_diff4.csv", 6000, 10, 10)
     model = sim.getModel()
 
-
-
-    model.save("models/model_diff_1_to_4/")
-    sim.testNetwork(timesteps = 18000, save_tracks = "data/")
+    sim.testNetwork(timesteps = 2000, save_tracks = "data/")
 
 if __name__ == "__main__":
     main()
