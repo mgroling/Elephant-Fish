@@ -8,6 +8,7 @@ from tensorflow.keras import layers
 from functions import getDistances, getAngles
 from reader import extract_coordinates
 from locomotion import getnLoc
+from evaluation import plot_train_history
 
 def getnView( tracksFish, tracksOther, nfish=3 ):
     """
@@ -63,6 +64,7 @@ def createNetwork( BATCH_SIZE=10, SEQ_LEN=75, COUNT_RAYS_WALLS=15, N_FISH=3, N_N
     # model.add( layers.Dense( 100 ) )
     model.add( layers.Dense( n_outputlayer ) )
     model.summary()
+    model.name = "4model_norm_v0"
     return model
 
 
@@ -110,13 +112,15 @@ def getData( TRAINSPLIT ):
     data[0:,-f1Loc:] = nLoc[0,:f1Loc]
     data[1:,-f1Loc:] = nLoc[:,:f1Loc]
     data = data[:-1]
+    target = nLoc[:,:f1Loc]
 
     # Standardize data
     data_mean = data[:TRAINSPLIT].mean( axis=0 )
     data_std = data[:TRAINSPLIT].std( axis=0 )
+    print( data[0] )
     data = ( data - data_mean ) / data_std
-    target = ( nLoc[:,:f1Loc] - data_mean[-f1Loc:] ) / data_std[-f1Loc:]
-    return np.nan_to_num( data ) , np.nan_to_num( target )
+    target = ( target - data_mean[-f1Loc:] ) / data_std[-f1Loc:]
+    return np.nan_to_num( data ) , np.nan_to_num( target ), data_mean[-f1Loc:], data_std[-f1Loc:]
 
 
 def main():
@@ -132,9 +136,13 @@ def main():
     D_LOC = N_NODES * 2 + 1
     D_DATA = N_VIEWS + N_WRAYS + D_LOC
     D_OUT = D_LOC
+    EPOCHS = 200
 
-    data, target = getData( TRAINSPLIT )
+    data, target, data_mean, data_std = getData( TRAINSPLIT )
     assert D_OUT == target.shape[-1]
+    # print( np.amax( data, axis=0 ) )
+    # print( np.amin( data, axis=0 ) )
+    # print( np.mean( data, axis=0 ) )
 
     x_train, y_train = multivariate_data( data, target, 0, TRAINSPLIT, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
     x_val, y_val = multivariate_data( data, target, TRAINSPLIT, None, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
@@ -153,9 +161,34 @@ def main():
     nmodel.add( tf.keras.layers.Dense( 100 ) )
     nmodel.add( tf.keras.layers.Dense( D_OUT ) )
 
-    for x, y in train_data.take(1):
-        print( nmodel.predict(x) )
-        print( nmodel.predict(x).shape )
+    nmodel.compile( optimizer=tf.keras.optimizers.RMSprop(), loss='mean_squared_error' )
+
+    EVALUATION_INTERVAL = len( x_train ) // BATCH_SIZE
+    VAL_INTERVAL = len( x_val ) // BATCH_SIZE
+    print( "Eval Interval: ", EVALUATION_INTERVAL )
+    print( "Val interval:", VAL_INTERVAL )
+    history = nmodel.fit( train_data, epochs=EPOCHS, steps_per_epoch=EVALUATION_INTERVAL, validation_data=val_data, validation_steps=VAL_INTERVAL )
+
+    # model = keras.models.load_model('path/to/location')
+
+    for x, y in val_data.take(1):
+        p = nmodel.predict(x)
+        print( p )
+        print( p.shape )
+        print( "target" )
+        print( y )
+        print( y.shape )
+        print( "unnormalized" )
+        un = p * data_std + data_mean
+        uy = y * data_std + data_mean
+        print( un )
+        print( un.p )
+        print( "target" )
+        print( uy )
+        print( uy.shape )
+
+    nmodel.save( "models/" )
+    plot_train_history( history, "4model_normalized_v0" )
 
 if __name__ == "__main__":
     main()
