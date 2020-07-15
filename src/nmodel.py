@@ -168,7 +168,7 @@ def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_L
 
 def simulate( model, nnodes, nfish, startpositions, startlocs, timesteps, N_VIEWS, D_LOC, N_WRAYS, FOV_WALLS, MAX_VIEW_RANGE, ):
     """
-    returns nLoc array with simulation predicitons
+    returns positions of nodes, then polar position of center, then nLoc of predictions
     """
     assert len( startpositions ) == nnodes * 2 * nfish
     assert len( startlocs ) == D_LOC * nfish
@@ -230,16 +230,22 @@ def simulate( model, nnodes, nfish, startpositions, startlocs, timesteps, N_VIEW
             nLoc[t, loc_ind] = prediction
 
             # 3. New positions
+
             # 3.1 new center position
             loc_ind_linAngTurn = [f * D_LOC, f * D_LOC + 1, f * D_LOC + 2]
             pos_ind_xyOri = [f * 3, f * 3 + 1, f * 3 + 2]
             posCenterPolar[t + 1, pos_ind_xyOri] = row_l2c( posCenterPolar[t, pos_ind_xyOri], nLoc[t, loc_ind_linAngTurn] )
+
             # 3.2 all the other positions
             pred_ind_otherNodes = [ 3 + x for x in range( (nnodes - 1 ) * 2 ) ]
             pos[t + 1, pos_ind_center] = posCenterPolar[t + 1,[f * 3, f * 3 + 1]]
             output = row_l2c_additional_nodes( posCenterPolar[t + 1,pos_ind_xyOri], prediction[pred_ind_otherNodes] )
 
-    return nLoc
+            pos[t + 1, pos_ind_head] = output[0:2]
+            pos_ind_otherNodes = [nnodes * 2 * f + 4 + x for x in range( ( nnodes - 2 ) * 2 )]
+            pos[t + 1, pos_ind_otherNodes] = output[2:]
+
+    return pos, posCenterPolar, nLoc
 
 
 def getDatasets( x_train, y_train, x_val, y_val, BATCH_SIZE, BUFFER_SIZE ):
@@ -278,7 +284,7 @@ def main():
     """
     # Parameters
     SPLIT = 0.9
-    BATCH_SIZE = 10
+    BATCH_SIZE = 12
     BUFFER_SIZE= 10000
     EPOCHS = 50
     HIST_SIZE = 120 # frames to be looked on or SEQ_LEN
@@ -291,7 +297,7 @@ def main():
     D_DATA = N_VIEWS + N_WRAYS + D_LOC
     D_OUT = D_LOC
     U_LSTM = D_DATA
-    U_DENSE = D_DATA // 3
+    U_DENSE = D_DATA // 2
     U_OUT = D_LOC
     FOV_WALLS = 180
     MAX_VIEW_RANGE = 709
