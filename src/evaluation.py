@@ -568,8 +568,8 @@ def main():
     polarTracks = np.array([startpolar])
     startpositions = convPolarToCart( polarTracks, distances )[0]
     tracks = locomotion.convLocToCart( loc, startpositions )
-    # create_plots( tracks, path="figures/simulation" )
-    visualization.addTracksOnTank( "C:/Users/Gabriel/Videos/sim_tracks.avi", tracks, skeleton=[(0,1)], showvid=False )
+    create_plots( tracks, path="figures/simulation" )
+    #visualization.addTracksOnTank( "I:/Code/SWP/sim_tracks.avi", tracks, skeleton=[(0,1)], showvid=False )#"C:/Users/Gabriel/Videos/sim_tracks.avi"
 
 if __name__ == "__main__":
     main()
