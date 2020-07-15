@@ -131,10 +131,10 @@ def main():
     N_VIEWS =  (N_FISH - 1 ) * N_NODES * 2
     D_LOC = N_NODES * 2 + 1
     D_DATA = N_VIEWS + N_WRAYS + D_LOC
-    D_OUT = N_NODES * 20 + 20
-
+    D_OUT = D_LOC
 
     data, target = getData( TRAINSPLIT )
+    assert D_OUT == target.shape[-1]
 
     x_train, y_train = multivariate_data( data, target, 0, TRAINSPLIT, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
     x_val, y_val = multivariate_data( data, target, TRAINSPLIT, None, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
@@ -148,9 +148,14 @@ def main():
 
     nmodel = tf.keras.models.Sequential()
     print( "prediction: ({}, {})".format( HIST_SIZE, D_DATA ) )
-    print( x_train.shape )
-    print( x_train.shape[-2:] )
-    nmodel.add( tf.keras.layers.LSTM( D_DATA * 2, input_shape=x_train.shape[-2:] ) )
+    print( "input shape: {}".format( x_train.shape[-2:] ) )
+    nmodel.add( tf.keras.layers.LSTM( D_DATA * 4, input_shape=x_train.shape[-2:] ) )
+    nmodel.add( tf.keras.layers.Dense( 100 ) )
+    nmodel.add( tf.keras.layers.Dense( D_OUT ) )
+
+    for x, y in train_data.take(1):
+        print( nmodel.predict(x) )
+        print( nmodel.predict(x).shape )
 
 if __name__ == "__main__":
     main()
