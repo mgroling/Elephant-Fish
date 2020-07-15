@@ -6,10 +6,11 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
-from functions import getDistances, getAngles
+from functions import getDistances, getAngles, getDistance, getAngle, defineLines, getRedPoints
 from reader import extract_coordinates
 from locomotion import getnLoc
 from evaluation import plot_train_history
+from raycasts import Raycast
 
 def getnView( tracksFish, tracksOther, nfish=3 ):
     """
@@ -46,19 +47,15 @@ def getnViewSingle( posFish, posOther, nnodes, nfish=3 ):
     center = np.array( posFish[2:4] )
     head = np.array( posFish[0:2] )
     vec_ch = head - center
-    print( center )
-    print( posFish )
-    print( posOther )
+    out = np.empty( ( nnodes * (nfish - 1) * 2 ) )
     for f in range( nfish - 1 ):
         for n in range( nnodes ):
             ixy = [2 * nnodes * f + 2 * n, 2 * nnodes * f + 2 * n + 1]
             # node - center
             vec_cn = posOther[ixy] - center
-            print( "p ", posOther[ixy] )
-            print( "u ", vec_cn )
-    # print( head )
-    # print( vec_ch )
-    # print( posFish )
+            out[nnodes * 2 * f + 2 * n] = getDistance( (posOther[ixy])[0], (posOther[ixy])[1], center[0], center[1] )
+            out[nnodes * 2 * f + 2 * n + 1] = getAngle( vec_ch, vec_cn, "radians" )
+    return out
 
 
 def stealWallRays( path, COUNT_RAYS_WALLS=15, nfish=3 ):
@@ -169,15 +166,21 @@ def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_L
     return x_data_train, y_data_train, x_data_val, y_data_val
 
 
-def simulate( model, nnodes, nfish, startpositions, timesteps ):
+def simulate( model, nnodes, nfish, startpositions, startlocs, timesteps, N_VIEWS, D_LOC, N_WRAYS, FOV_WALLS, MAX_VIEW_RANGE, ):
     """
     returns nLoc array with simulation predicitons
     """
     assert len( startpositions ) == nnodes * 2 * nfish
+    assert len( startlocs ) == D_LOC * nfish
+    assert nnodes >= 2
     nLoc = np.empty( (timesteps, (nnodes * 2 + 1) * nfish ) )
     pos = np.empty( (timesteps + 1, nnodes * 2 * nfish ) )
     pos[0] = startpositions
-    #
+    # MARCS RAYCAST OBJECT
+    walllines = defineLines( getRedPoints(path = "data/final_redpoint_wall.jpg") )
+    unnecessary = 10
+    raycast_object = Raycast( walllines, unnecessary, N_WRAYS, unnecessary, FOV_WALLS, MAX_VIEW_RANGE, nfish )
+    print( pos.shape )
     pos_ind = [[]]
     # main loop
     for t in range( timesteps ):
@@ -186,14 +189,27 @@ def simulate( model, nnodes, nfish, startpositions, timesteps ):
             # 2. Compute prediction
             # 3. Compute new positions
 
+            inp = np.empty( (N_VIEWS + N_WRAYS + D_LOC) )
             # 1. Input for fish
             # nView
             pos_indices_ch = [f * nnodes * 2, f * nnodes * 2 + 1, f * nnodes * 2 + 2, f * nnodes * 2 + 3]
             pos_iSubtract = [x + nnodes * 2 * f for x in range( nnodes * 2 )]
             pos_indices_otherFish = [x for x in range( nnodes * nfish * 2 ) if x not in pos_iSubtract]
-            print( pos[t] )
-            fnView = getnViewSingle( pos[t,pos_indices_ch], pos[t,pos_indices_otherFish], nnodes=nnodes, nfish = nfish )
-            break
+            inp[:N_VIEWS] = getnViewSingle( pos[t,pos_indices_ch], pos[t,pos_indices_otherFish], nnodes=nnodes, nfish = nfish )
+            # wRays
+            fcenter = pos[t,[f * nnodes * 2 + 2, f * nnodes * 2 + 3]]
+            fhead = pos[t,[f * nnodes * 2, f * nnodes * 2 + 1]]
+            vec_ch = fhead - fcenter
+            inp[N_VIEWS:-D_LOC] = raycast_object._getWallRays( fcenter, vec_ch )
+            # nLoc
+            loc_ind = [f * D_LOC + x for x in range(D_LOC)]
+            if t == 0:
+                inp[-D_LOC:] = startlocs[loc_ind]
+            else:
+                inp[-D_LOC:] = nLoc[loc_ind]
+            print( loc_ind )
+            print( inp.shape )
+            print( inp )
         break
 
 
@@ -239,7 +255,7 @@ def main():
     BATCH_SIZE = 10
     BUFFER_SIZE= 10000
     EPOCHS = 50
-    HIST_SIZE = 30 # frames to be looked on or SEQ_LEN
+    HIST_SIZE = 70 # frames to be looked on or SEQ_LEN
     TARGET_SIZE = 0
     N_NODES = 4
     N_FISH = 3
@@ -248,13 +264,14 @@ def main():
     D_LOC = N_NODES * 2 + 1
     D_DATA = N_VIEWS + N_WRAYS + D_LOC
     D_OUT = D_LOC
-    U_LSTM = 4 * D_DATA
-    U_DENSE = 2 * D_DATA
+    U_LSTM = D_DATA
+    U_DENSE = D_DATA
     U_OUT = D_LOC
-    NAME = "4model_v5"
+    FOV_WALLS = 180
+    MAX_VIEW_RANGE = 709
+    NAME = "4model_v6"
     NAME = NAME + "_" + str( U_LSTM ) + "_" + str( U_DENSE ) + "_" + str( U_OUT ) + "_" + str( BATCH_SIZE ) + "_" + str( HIST_SIZE )
     LOAD = "4model_v5_36_18_9_20_70"
-
 
     same1 = "data/sleap_1_same1.h5"
     same3 = "data/sleap_1_same3.h5"
@@ -266,8 +283,8 @@ def main():
     same5rays = "data/raycast_data_same5.csv"
 
     if True:
-        pathsTracksets = [same1,same3,same4,same5]
-        pathsRaycasts = [same1rays,same3rays,same4rays,same5rays]
+        pathsTracksets = [same1,same3]
+        pathsRaycasts = [same1rays,same3rays]
 
         x_train, y_train, x_val, y_val = loadData( pathsTracksets, pathsRaycasts, nodes=[b'head', b'center', b'tail_basis', b'tail_end'], nfish=3, N_WRAYS=N_WRAYS, N_VIEWS=N_VIEWS, D_LOC=D_LOC, D_DATA=D_DATA, D_OUT=D_OUT, SPLIT=SPLIT, HIST_SIZE=HIST_SIZE, TARGET_SIZE=TARGET_SIZE )
         print( "x_train: {}".format( x_train.shape ) )
@@ -277,7 +294,7 @@ def main():
 
         traindata, valdata = getDatasets( x_train, y_train, x_val, y_val, BATCH_SIZE=BATCH_SIZE, BUFFER_SIZE=BUFFER_SIZE )
 
-        nmodel = createModel( NAME, U_LSTM, U_DENSE, U_OUT, x_train.shape[-2:] )
+        nmodel = createModel( NAME, U_LSTM, U_DENSE, U_OUT, x_train.shape[-2:], dropout=[0.1,0.1] )
         saveModel( NAME, nmodel )
 
         EVAL_INTERVAL = ( x_train.shape[0] ) // BATCH_SIZE
@@ -291,8 +308,10 @@ def main():
         # nmodel = tf.keras.models.load_model( LOAD )
         nmodel = None
         startpositions = [635.82489014, 218.66400146, 614.24102783, 213.71218872, 569.61773682, 211.43319702, 563.06671143, 211.47904968, 556.49041748, 271.07836914, 539.67126465, 285.99697876, 511.53341675, 321.82028198, 509.9105835, 328.56533813, 640.18927002, 429.0065918, 633.73266602, 404.88540649, 624.15777588, 356.77297974, 625.47979736, 348.31661987]
-        tracks = extract_coordinates( same1, [b'head', b'center', b'tail_basis', b'tail_end'] )[0]
-        simulate( nmodel, N_NODES, N_FISH, startpositions, 1000 )
+        startlocomotions = [2.20557576e+00, 3.83888240e-02, 2.31128226e-02, 2.08867611e+01, 0.00000000e+00, 4.20416095e+01, 3.10272032e+00, 4.83654902e+01, 3.15323521e+00, 7.04496149e-01, 2.87749306e+00, 6.21921276e+00, 2.36665253e+01, 0.00000000e+00, 4.68934161e+01, 3.36459434e+00, 5.37909806e+01, 3.37998034e+00, 2.58289250e-01, 2.93359127e+00, 6.79543903e-03, 2.31268859e+01, 0.00000000e+00, 5.24138135e+01, 2.97845064e+00, 5.97015506e+01, 2.98801713e+00]
+        # tracks = extract_coordinates( same1, [b'head', b'center', b'tail_basis', b'tail_end'] )
+        # print( getnLoc( tracks, nnodes=N_NODES, nfish=N_FISH )[100] )
+        simulate( nmodel, N_NODES, N_FISH, startpositions, startlocomotions, 1000, N_VIEWS=N_VIEWS, N_WRAYS=N_WRAYS, D_LOC=D_LOC, FOV_WALLS=FOV_WALLS, MAX_VIEW_RANGE=MAX_VIEW_RANGE )
 
 
 
