@@ -105,7 +105,7 @@ class Raycast:
                 intersection = get_intersect((self._wall_lines[j][0], self._wall_lines[j][1]), (self._wall_lines[j][2], self._wall_lines[j][3]), (start_pos[0], start_pos[1]), (start_pos[0] + new_ray[0], start_pos[1] + new_ray[1]))
 
                 #check if it is between the two points of the line and if it is in max_view_range
-                if intersection[0] >= min(self._wall_lines[j][0], self._wall_lines[j][2]) and intersection[0] <= intersection[0] <= max(self._wall_lines[j][0], self._wall_lines[j][2]) and getDistance(start_pos[0], start_pos[1], intersection[0], intersection[1]) < self._max_view_range:
+                if intersection[0] >= min(self._wall_lines[j][0], self._wall_lines[j][2]) and intersection[0] <= max(self._wall_lines[j][0], self._wall_lines[j][2]) and getDistance(start_pos[0], start_pos[1], intersection[0], intersection[1]) < self._max_view_range:
                     distances[i] = (1 - getDistance(start_pos[0], start_pos[1], intersection[0], intersection[1]) / self._max_view_range)
                     break
 
