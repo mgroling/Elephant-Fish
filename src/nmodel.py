@@ -218,6 +218,20 @@ def simulate( model, nnodes, nfish, startinput, startpos, startloc, timesteps, N
     assert len( startpos ) == nnodes * 2 * nfish
     assert startinput.shape[-1] == D_LOC + N_VIEWS + N_WRAYS
     assert nnodes >= 2
+
+   if mean is not None:
+        arr = np.load( mean, allow_pickle=True )
+        meanv = arr[0]
+        std = arr[1]
+        meanTGT = arr[2]
+        stdTGT = arr[3]
+        print( "Using mean and std:")
+        print( meanv )
+        print( std )
+        print( "Using mean and std for target:" )
+        print( meanTGT )
+        print( stdTGT )
+
     nLoc = np.empty( ( timesteps, (nnodes * 2 + 1) * nfish ) )
     pos = np.empty( ( timesteps + 1, nnodes * 2 * nfish ) ) # saves x, y val for every node
     posCenterPolar = np.empty( (timesteps + 1, 3 * nfish ) ) # saves c_x, c_y, orienation
