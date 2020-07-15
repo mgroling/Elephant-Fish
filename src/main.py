@@ -1,9 +1,10 @@
 from functions import *
 from locomotion import *
 from raycasts import *
+from analysis import *
 from tensorflow.keras.optimizers import RMSprop
 from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import Dense, LSTM, BatchNormalization
+from tensorflow.keras.layers import Dense, LSTM, BatchNormalization, Dropout
 from itertools import chain
 import reader
 import tensorflow as tf
@@ -51,6 +52,61 @@ class Simulation:
 
         shap.summary_plot(shap_values, self._tracks[0], plot_type = "bar")
 
+    def trainNetworkOnce(self, locomotion_paths, raycast_paths, batch_size, sequence_length, epochs):
+        x_train_data_all, y_train_data_all = None, None
+        x_val_data_all, y_val_data_all = None, None
+
+        for i in range(0, len(locomotion_paths)):
+            #get locomotion
+            df = pd.read_csv(locomotion_paths[i], sep = ";")
+            locomotion = df.to_numpy()
+
+            #get raycasts (we dont need the first raycast cause it does not have a last locomotion)
+            df = pd.read_csv(raycast_paths[i], sep = ";")
+            raycasts = df.to_numpy()[1:]
+
+            loc_size = 3
+
+            for j in range(0, len(self._count_agents)):
+                loc = locomotion[:, j*loc_size : (j+1)*loc_size]
+                wall_rays = raycasts[:, j*self._count_bins : (j+1)*self._count_bins]
+                agent_rays = raycasts[:, self._count_agents*self._count_bins+j*self._count_rays : self._count_agents*self._count_bins+(j+1)*self._count_rays]
+
+                trajectory = np.append(np.append(loc, wall_rays, axis = 1), agent_rays, axis = 1)
+
+                TRAIN_SPLIT = int(0.8*len(trajectory))
+
+                #standardize datset
+                subtrack_mean = trajectory[:TRAIN_SPLIT].mean(axis = 0)
+                subtrack_std = trajectory[:TRAIN_SPLIT].std(axis = 0)
+                trajectory = (trajectory - subtrack_mean) / subtrack_std
+
+                #create sequences
+                x_train, y_train = multivariate_data(trajectory, trajectory[:, 0:3], 0, TRAIN_SPLIT, sequence_length, 1, 1, single_step = True)
+                x_val, y_val = multivariate_data(trajectory, trajectory[:, 0:3], TRAIN_SPLIT, None, sequence_length, 1, 1, single_step = True)
+
+                if i == 0 and j == 0:
+                    x_train_data_all, y_train_data_all = x_train, y_train
+                    x_val_data_all, y_val_data_all = x_val, y_val
+                else:
+                    print("should be (n, seq_length, 39):", x_train.shape)
+                    x_train_data_all = np.append(x_train_data_all, x_train, axis = 0), np.append(y_train_data_all, y_train, axis = 0)
+                    x_val_data_all = np.append(x_val_data_all, x_val, axis = 0), np.append(y_val_data_all, y_val, axis = 0)
+
+        train_data = tf.data.Dataset.from_tensor_slices((x_train_data_all, y_train_data_all))
+        train_data = train_data.cache().shuffle(10000).batch(batch_size).repeat()
+
+        val_data = tf.data.Dataset.from_tensor_slices((x_val_data_all, y_val_data_all))
+        val_data = val_data.batch(batch_size).repeat()
+
+        if self.verbose >= 2:
+            history = self._model.fit(train_data, epochs = epochs, steps_per_epoch = len(train_data) // batch_size, validation_data = val_data, validation_steps = 50, verbose = 1)
+            plot_train_history(history, "Training and validation loss")
+        else:
+            history = self._model.fit(train_data, epochs = epochs, steps_per_epoch = len(train_data) // batch_size, validation_data = val_data, validation_steps = 50, verbose = 0)
+            plot_train_history(history, "Training and validation loss")
+            
+
     def trainNetwork(self, locomotion_path, raycasts_path, subtrack_length, batch_size, sequence_length, epochs, saveForExplainable = False):
         """
         trains the Network on the given dataset, by dividing it into subtracks, each subtrack has a length of subtrack_length,
@@ -81,7 +137,9 @@ class Simulation:
                 y.append(locomotion[subtrack*subtrack_length+1 : min((subtrack+1)*subtrack_length, len(locomotion)-1), i*loc_size : (i+1)*loc_size])
 
                 #get raycasts
-                X[-1] = np.append(np.append(X[-1], raycasts[subtrack*subtrack_length+1 : min((subtrack+1)*subtrack_length, len(raycasts)-2), i*self._count_bins : (i+1)*self._count_bins], axis = 1), raycasts[subtrack*subtrack_length+1 : min((subtrack+1)*subtrack_length, len(raycasts)-2), self._count_agents*self._count_bins+i*self._count_rays : self._count_agents*self._count_bins+(i+1)*self._count_rays], axis = 1)
+                wall_rays = raycasts[subtrack*subtrack_length+1 : min((subtrack+1)*subtrack_length, len(raycasts)-2), i*self._count_bins : (i+1)*self._count_bins]
+                agent_rays = raycasts[subtrack*subtrack_length+1 : min((subtrack+1)*subtrack_length, len(raycasts)-2), self._count_agents*self._count_bins+i*self._count_rays : self._count_agents*self._count_bins+(i+1)*self._count_rays]
+                X[-1] = np.append(np.append(X[-1], wall_rays, axis = 1), agent_rays, axis = 1)
 
         for i in range(0, len(X)):
             TRAIN_SPLIT = int(0.8*len(X[i]))
@@ -267,7 +325,7 @@ class Simulation:
         look_vector = cur_pos[0] + cur_pos[2]*math.cos(cur_pos[3]) - cur_pos[0], cur_pos[1] + cur_pos[2]*math.sin(cur_pos[3]) - cur_pos[1]
         vectorToCenter = centerPoint[0] - cur_pos[0], centerPoint[1] - cur_pos[1]
 
-        mov = 20
+        mov = 3
         pos = getAngle(look_vector, vectorToCenter, mode = "radians")
         ori = cur_pos[3]
 
@@ -288,27 +346,37 @@ def main():
     COUNT_FISHES = 3
     CLUSTER_COUNTS = (18, 17, 26)
 
-    SEQUENCE_LENGTH = 35
+    SEQUENCE_LENGTH = 70
     BATCH_SIZE = 20
     SUBTRACK_LENGTH = 6100
-    EPOCHS = 20
+    EPOCHS = 1
+
+    locomotion_paths = ["data/locomotion_data_same1.csv", "data/locomotion_data_same3.csv", "data/locomotion_data_same4.csv", "data/locomotion_data_same5.csv"]
+    raycast_paths = ["data/raycast_data_same1.csv", "data/raycast_data_same3.csv", "data/raycast_data_same4.csv", "data/raycast_data_same5.csv"]
+
+    #40
+    #20
 
     model = Sequential()
-    model.add(LSTM(32, input_shape = (SEQUENCE_LENGTH, COUNT_BINS_AGENTS+COUNT_RAYS_WALLS+3)))
+    model.add(LSTM(40, input_shape = (SEQUENCE_LENGTH, COUNT_BINS_AGENTS+COUNT_RAYS_WALLS+3)))
+    model.add(Dropout(0.3))
+    model.add(Dense(20))
+    model.add(Dropout(0.3))
     model.add(Dense(3))
-    model.compile(optimizer = RMSprop(), loss = "mae")
+    model.compile(optimizer = RMSprop(), loss = "mse")
 
-    # model = load_model("models/model_diff1_wobin")
+    # model = load_model("models/model_LSTM64_DROPOUT02_DENSE3_70_20_6100_1")
 
     sim = Simulation(COUNT_BINS_AGENTS, COUNT_RAYS_WALLS, RADIUS_FIELD_OF_VIEW_WALLS, RADIUS_FIELD_OF_VIEW_AGENTS, MAX_VIEW_RANGE, COUNT_FISHES, None, verbose = 2)
     sim.setModel(model)
-    sim.trainNetwork("data/locomotion_data_diff1.csv", "data/raycast_data_diff1.csv", SUBTRACK_LENGTH, BATCH_SIZE, SEQUENCE_LENGTH, EPOCHS)
-    # # sim.trainNetwork("data/locomotion_data_bin_diff2.csv", "data/raycast_data_diff2.csv", 6000, 10, 10)
-    # # sim.trainNetwork("data/locomotion_data_bin_diff3.csv", "data/raycast_data_diff3.csv", 6000, 10, 10)
-    # # sim.trainNetwork("data/locomotion_data_bin_diff4.csv", "data/raycast_data_diff4.csv", 6000, 10, 10)
-    # model = sim.getModel()
+    sim.trainNetworkOnce(locomotion_paths[0:2], raycast_paths[0:2], BATCH_SIZE, SEQUENCE_LENGTH, EPOCHS)
+    # sim.trainNetwork("data/locomotion_data_same1.csv", "data/raycast_data_same1.csv", SUBTRACK_LENGTH, BATCH_SIZE, SEQUENCE_LENGTH, EPOCHS)
+    # sim.trainNetwork("data/locomotion_data_same3.csv", "data/raycast_data_same3.csv", SUBTRACK_LENGTH, BATCH_SIZE, SEQUENCE_LENGTH, EPOCHS)
+    # sim.trainNetwork("data/locomotion_data_same4.csv", "data/raycast_data_same4.csv", SUBTRACK_LENGTH, BATCH_SIZE, SEQUENCE_LENGTH, EPOCHS)
+    # sim.trainNetwork("data/locomotion_data_same5.csv", "data/raycast_data_same5.csv", SUBTRACK_LENGTH, BATCH_SIZE, SEQUENCE_LENGTH, EPOCHS)
+    model = sim.getModel()
 
-    # model.save("models/model_diff1_wobin_denseonly")
+    model.save("models/model_LSTM_ALL")
 
     sim.testNetwork(timesteps = 2000, save_tracks = "data/")
 

@@ -206,6 +206,21 @@ def kneeLocatorPlotter(x, y, title, kindOfLoc):
 
     return kneedle.knee
 
+def plot_train_history(history, title):
+    loss = history.history['loss']
+    val_loss = history.history['val_loss']
+
+    epochs = range(len(loss))
+
+    plt.figure()
+
+    plt.plot(epochs, loss, 'b', label='Training loss')
+    plt.plot(epochs, val_loss, 'r', label='Validation loss')
+    plt.title(title)
+    plt.legend()
+
+    plt.show()
+
 if __name__ == "__main__":
     paths = ["data/locomotion_data_diff1.csv", "data/locomotion_data_diff2.csv", "data/locomotion_data_diff3.csv", "data/locomotion_data_diff4.csv", "data/locomotion_data_same1.csv", "data/locomotion_data_same3.csv", "data/locomotion_data_same4.csv", "data/locomotion_data_same5.csv"]
     getClusters(paths, "data/", (18,17,26), verbose = False)
