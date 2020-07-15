@@ -47,7 +47,7 @@ class Raycast:
                 #vector of the direction of the fish in question
                 first_component, second_component = (self._fishes[j][i][0] - self._fishes[j][i][2], self._fishes[j][i][1] - self._fishes[j][i][3])
                 look_vector = np.array([first_component, second_component])
-                start_pos = np.array([self._fishes[j][i][0], self._fishes[j][i][1]])
+                start_pos = np.array([self._fishes[j][i][2], self._fishes[j][i][3]])
 
                 #get angles and distance for this timestep
                 fishRays = self._getFishRays(j, i, look_vector)
@@ -79,7 +79,7 @@ class Raycast:
         for i in range(0, len(self._fishes)):
             if i != fish_id:
                 #get a vector to each other fish, from the current fish in question
-                vector_to_fish = np.array([self._fishes[i][row][2] - self._fishes[fish_id][row][2], self._fishes[i][row][2] - self._fishes[fish_id][row][2]])
+                vector_to_fish = np.array([self._fishes[i][row][2] - self._fishes[fish_id][row][2], self._fishes[i][row][3] - self._fishes[fish_id][row][3]])
 
                 distance = getDistance(self._fishes[i][row][2], self._fishes[i][row][3], self._fishes[fish_id][row][2], self._fishes[fish_id][row][3])
                 angle = getAngle(look_vector, vector_to_fish)
@@ -89,7 +89,6 @@ class Raycast:
         return return_list
 
     def _getWallRays(self, start_pos, look_vector):
-
         pos_x_axis = np.array([1, 0])
 
         angle_pos_x_axis_look_vector = getAngle(look_vector, pos_x_axis)
@@ -117,6 +116,27 @@ class Raycast:
         for i in range(0, int(np_array.shape[1]/4)):
             self._fishes.append(np_array[:, i*4:(i+1)*4].astype(float))
 
+def updateRaycasts():
+    COUNT_BINS_AGENTS = 21
+    WALL_RAYS_WALLS = 15
+    RADIUS_FIELD_OF_VIEW_WALLS = 180
+    RADIUS_FIELD_OF_VIEW_AGENTS = 300
+    MAX_VIEW_RANGE = 709
+    COUNT_FISHES = 3
+    our_wall_lines = defineLines(getRedPoints(path = "data/final_redpoint_wall.jpg"))
+
+    ray = Raycast(our_wall_lines, COUNT_BINS_AGENTS, WALL_RAYS_WALLS, RADIUS_FIELD_OF_VIEW_AGENTS, RADIUS_FIELD_OF_VIEW_WALLS, MAX_VIEW_RANGE, COUNT_FISHES)
+
+    ray.getRays(extract_coordinates("data/sleap_1_diff1.h5", [b'head', b'center'], fish_to_extract=[0,1,2]), "data/raycast_data_diff1.csv")
+    ray.getRays(extract_coordinates("data/sleap_1_diff2.h5", [b'head', b'center'], fish_to_extract=[0,1,2]), "data/raycast_data_diff2.csv")
+    ray.getRays(extract_coordinates("data/sleap_1_diff3.h5", [b'head', b'center'], fish_to_extract=[0,1,2])[:17000], "data/raycast_data_diff3.csv")
+    ray.getRays(extract_coordinates("data/sleap_1_diff4.h5", [b'head', b'center'], fish_to_extract=[0,1,2])[120:], "data/raycast_data_diff4.csv")
+
+    ray.getRays(extract_coordinates("data/sleap_1_same1.h5", [b'head', b'center'], fish_to_extract=[0,1,2]), "data/raycast_data_same1.csv")
+    ray.getRays(extract_coordinates("data/sleap_1_same3.h5", [b'head', b'center'], fish_to_extract=[0,1,2])[130:], "data/raycast_data_same3.csv")
+    ray.getRays(extract_coordinates("data/sleap_1_same4.h5", [b'head', b'center'], fish_to_extract=[0,1,2]), "data/raycast_data_same4.csv")
+    ray.getRays(extract_coordinates("data/sleap_1_same5.h5", [b'head', b'center'], fish_to_extract=[0,1,2]), "data/raycast_data_same5.csv")
+
 def main():
     #Set variables
     COUNT_BINS_AGENTS = 21
@@ -139,14 +159,14 @@ def main():
 
     ray = Raycast(our_wall_lines, COUNT_BINS_AGENTS, WALL_RAYS_WALLS, RADIUS_FIELD_OF_VIEW_AGENTS, RADIUS_FIELD_OF_VIEW_WALLS, MAX_VIEW_RANGE, COUNT_FISHES)
 
-    file = "data/sleap_1_same5.h5"
+    file = "data/sleap_1_same3.h5"
 
-    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])[:]
+    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])[130:]
 
     print("shape:",temp.shape)
 
     #get rays and save them
-    ray.getRays(temp , "data/raycast_data_same5.csv")
+    ray.getRays(temp , "data/raycast_data_same3.csv")
 
 if __name__ == "__main__":
     main()
