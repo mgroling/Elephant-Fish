@@ -85,34 +85,6 @@ def multivariate_data( dataset, target, start_index, end_index, history_size, ta
     return np.array( data ), np.array( labels )
 
 
-def getData( TRAINSPLIT ):
-    """
-    Full Manual Frankencode now
-    """
-    tracks = extract_coordinates( "data/sleap_1_diff1.h5", [b'head', b'center', b'tail_basis', b'tail_end'] )
-    nLoc = getnLoc( tracks, nnodes=4, nfish=3 )
-    nView = getnView( tracks[:,0:4], tracks[:,8:], nfish=3 )
-    wallrays = stealWallRays( "data/raycast_data_diff1.csv", COUNT_RAYS_WALLS=15, nfish=3 )[:,0:15]
-    rowsLoc, colsLoc = nLoc.shape
-    f1Loc = colsLoc // 3
-    data = np.empty( ( rowsLoc + 1, f1Loc + nView.shape[-1] + wallrays.shape[-1] ) )
-    data[:,0:nView.shape[-1]] = nView
-    data[:,nView.shape[-1]:-f1Loc] = wallrays
-    # duplicate loc at beginning ( i know i know ... )
-    data[0,-f1Loc:] = nLoc[0,:f1Loc]
-    data[1:,-f1Loc:] = nLoc[:,:f1Loc]
-    data = data[:-1]
-    target = nLoc[:,:f1Loc]
-
-    # Standardize data
-    # data_mean = data[:TRAINSPLIT].mean( axis=0 )
-    # data_std = data[:TRAINSPLIT].std( axis=0 )
-    # data = ( data - data_mean ) / data_std
-    # target = ( target - data_mean[-f1Loc:] ) / data_std[-f1Loc:]
-    # return np.nan_to_num( data ) , np.nan_to_num( target ), data_mean[-f1Loc:], data_std[-f1Loc:]
-    return np.nan_to_num( data ) , np.nan_to_num( target )
-
-
 def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_LOC, D_DATA, D_OUT, HIST_SIZE, TARGET_SIZE, SPLIT=0.9 ):
     """
     pathsTrackset and pathsRaycast need to be in same order
@@ -184,74 +156,6 @@ def simulate( model, nnodes, nfish, startpositions, timesteps ):
 
     return nLoc
 
-def train():
-    TRAINSPLIT = 15000
-    BATCH_SIZE = 20
-    BUFFER_SIZE= 10000
-    HIST_SIZE = 70 # frames to be looked on or SEQ_LEN
-    TARGET_SIZE = 0
-    N_NODES = 4
-    N_FISH = 3
-    N_WRAYS = 15
-    N_VIEWS =  (N_FISH - 1 ) * N_NODES * 2
-    D_LOC = N_NODES * 2 + 1
-    D_DATA = N_VIEWS + N_WRAYS + D_LOC
-    D_OUT = D_LOC
-    EPOCHS = 50
-
-    # data, target, data_mean, data_std = getData( TRAINSPLIT )
-    data, target = getData( TRAINSPLIT )
-    assert D_OUT == target.shape[-1]
-    # print( np.amax( data, axis=0 ) )
-    # print( np.amin( data, axis=0 ) )
-    # print( np.mean( data, axis=0 ) )
-
-    x_train, y_train = multivariate_data( data, target, 0, TRAINSPLIT, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
-    x_val, y_val = multivariate_data( data, target, TRAINSPLIT, None, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
-    print( "Single entry shape: {}".format( x_train[0].shape ) )
-
-    train_data = tf.data.Dataset.from_tensor_slices( ( x_train, y_train ) )
-    train_data = train_data.cache().shuffle( BUFFER_SIZE ).batch( BATCH_SIZE ).repeat()
-
-    val_data = tf.data.Dataset.from_tensor_slices( ( x_val, y_val ) )
-    val_data = val_data.batch( BATCH_SIZE ).repeat()
-
-    nmodel = tf.keras.models.Sequential()
-    print( "prediction: ({}, {})".format( HIST_SIZE, D_DATA ) )
-    print( "input shape: {}".format( x_train.shape[-2:] ) )
-    nmodel.add( tf.keras.layers.LSTM( D_DATA * 4, input_shape=x_train.shape[-2:] ) )
-    nmodel.add( tf.keras.layers.Dense( D_DATA * 4 ) )
-    nmodel.add( tf.keras.layers.Dense( D_OUT ) )
-
-    nmodel.compile( optimizer=tf.keras.optimizers.RMSprop(), loss='mean_squared_error' )
-
-    EVALUATION_INTERVAL = len( x_train ) // BATCH_SIZE
-    VAL_INTERVAL = len( x_val ) // BATCH_SIZE
-    print( "Eval Interval: ", EVALUATION_INTERVAL )
-    print( "Val interval:", VAL_INTERVAL )
-    history = nmodel.fit( train_data, epochs=EPOCHS, steps_per_epoch=EVALUATION_INTERVAL, validation_data=val_data, validation_steps=VAL_INTERVAL )
-
-    # model = keras.models.load_model('path/to/location')
-    nmodel.save( "models/4model_v3" )
-    plot_train_history( history, "4model_v3" )
-
-    for x, y in val_data.take(1):
-        p = nmodel.predict(x)
-        print( "predition" )
-        print( p )
-        print( p.shape )
-        print( "target" )
-        print( y )
-        print( y.shape )
-        # print( "unnormalized" )
-        # un = p * data_std + data_mean
-        # uy = y * data_std + data_mean
-        # print( un )
-        # print( un.shape )
-        # print( "target" )
-        # print( uy )
-        # print( uy.shape )
-
 
 def getDatasets( x_train, y_train, x_val, y_val, BATCH_SIZE, BUFFER_SIZE ):
     """
@@ -282,6 +186,7 @@ def saveModel( path, model ):
         path = path + "/"
 
     return model.save( path )
+
 
 def main():
     """
