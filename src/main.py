@@ -1,6 +1,7 @@
 from functions import *
 from locomotion import *
 from raycasts import *
+from analysis import *
 from tensorflow.keras.optimizers import RMSprop
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense, LSTM, BatchNormalization, Dropout
@@ -99,9 +100,11 @@ class Simulation:
         val_data = val_data.batch(batch_size).repeat()
 
         if self.verbose >= 2:
-            self._model.fit(train_data, epochs = epochs, steps_per_epoch = len(train_data) // batch_size, validation_data = val_data, validation_steps = 50, verbose = 1)
+            history = self._model.fit(train_data, epochs = epochs, steps_per_epoch = len(train_data) // batch_size, validation_data = val_data, validation_steps = 50, verbose = 1)
+            plot_train_history(history, "Training and validation loss")
         else:
-            self._model.fit(train_data, epochs = epochs, steps_per_epoch = len(train_data) // batch_size, validation_data = val_data, validation_steps = 50, verbose = 0)
+            history = self._model.fit(train_data, epochs = epochs, steps_per_epoch = len(train_data) // batch_size, validation_data = val_data, validation_steps = 50, verbose = 0)
+            plot_train_history(history, "Training and validation loss")
             
 
     def trainNetwork(self, locomotion_path, raycasts_path, subtrack_length, batch_size, sequence_length, epochs, saveForExplainable = False):
@@ -351,9 +354,14 @@ def main():
     locomotion_paths = ["data/locomotion_data_same1.csv", "data/locomotion_data_same3.csv", "data/locomotion_data_same4.csv", "data/locomotion_data_same5.csv"]
     raycast_paths = ["data/raycast_data_same1.csv", "data/raycast_data_same3.csv", "data/raycast_data_same4.csv", "data/raycast_data_same5.csv"]
 
+    #40
+    #20
+
     model = Sequential()
-    model.add(LSTM(64, input_shape = (SEQUENCE_LENGTH, COUNT_BINS_AGENTS+COUNT_RAYS_WALLS+3)))
-    model.add(Dropout(0.2))
+    model.add(LSTM(40, input_shape = (SEQUENCE_LENGTH, COUNT_BINS_AGENTS+COUNT_RAYS_WALLS+3)))
+    model.add(Dropout(0.3))
+    model.add(Dense(20))
+    model.add(Dropout(0.3))
     model.add(Dense(3))
     model.compile(optimizer = RMSprop(), loss = "mse")
 
