@@ -273,6 +273,8 @@ def main():
     NAME = NAME + "_" + str( U_LSTM ) + "_" + str( U_DENSE ) + "_" + str( U_OUT ) + "_" + str( BATCH_SIZE ) + "_" + str( HIST_SIZE )
     LOAD = "4model_v5_36_18_9_20_70"
 
+    tf.random.set_seed(13)
+
     same1 = "data/sleap_1_same1.h5"
     same3 = "data/sleap_1_same3.h5"
     same4 = "data/sleap_1_same4.h5"
