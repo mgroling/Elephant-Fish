@@ -108,7 +108,7 @@ def multivariate_data( dataset, target, start_index, end_index, history_size, ta
     return np.array( data ), np.array( labels )
 
 
-def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_LOC, D_DATA, D_OUT, HIST_SIZE, TARGET_SIZE, SPLIT=0.9, getmean=False, pathToSave=None, mean=None ):
+def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_LOC, D_DATA, D_OUT, HIST_SIZE, TARGET_SIZE, mean, SPLIT=0.9, getmean=False, pathToSave=None ):
     """
     pathsTrackset and pathsRaycast need to be in same order
     """
@@ -116,13 +116,13 @@ def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_L
     nnodes = len( nodes )
 
     if mean is not None:
-        arr = np.load( mean )
-        mean = arr[0]
+        arr = np.load( mean, allow_pickle=True )
+        meanv = arr[0]
         std = arr[1]
         meanTGT = arr[2]
         stdTGT = arr[3]
         print( "Using mean and std:")
-        print( mean )
+        print( meanv )
         print( std )
         print( "Using mean and std for target:" )
         print( meanTGT )
@@ -167,8 +167,8 @@ def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_L
             ftarget[-1] = fnLoc[-1]
 
             if mean is not None:
-                fdataset = np.nan_to_num( ( fdataset - mean ) / std )
-                # ftarget = np.nan_to_num( ( ftarget - meanTGT ) / stdTGT )
+                fdataset = np.nan_to_num( ( fdataset - meanv ) / std )
+                ftarget = np.nan_to_num( ( ftarget - meanTGT ) / stdTGT )
 
             x_train, y_train = multivariate_data( fdataset, ftarget, 0, splitindex, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
             x_data_train.append( x_train )
@@ -184,11 +184,11 @@ def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_L
 
     if getmean:
         totaldataset = np.concatenate( totaldataset, axis=0 )
-        mean = totaldataset.mean( axis=0 )
+        meanv = totaldataset.mean( axis=0 )
         std = totaldataset.std( axis=0 )
 
         print( "mean   :" )
-        print( mean )
+        print( meanv )
         print( "std    :" )
         print( std )
 
@@ -196,12 +196,12 @@ def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_L
         meanTGT = targetdataset.mean( axis=0 )
         stdTGT = targetdataset.std( axis=0 )
 
-        print( "mean   :" )
+        print( "meanTGT:" )
         print( meanTGT )
-        print( "std    :" )
+        print( "stTGT  :" )
         print( stdTGT )
 
-        np.save( pathToSave, np.array( [mean, std, meanTGT, stdTGT] ) )
+        np.save( pathToSave, np.array( [meanv, std, meanTGT, stdTGT] ) )
 
     x_data_train = np.concatenate( x_data_train, axis=0 )
     y_data_train = np.concatenate( y_data_train, axis=0 )
@@ -330,15 +330,30 @@ def saveModel( path, model ):
     return model.save( path )
 
 
-def loadStartData( path, pathRaycast, nodes, nfish, HIST_SIZE,TARGET_SIZE, N_WRAYS, D_DATA, N_VIEWS, D_LOC, MEAN, notrandom=None ):
+def loadStartData( path, pathRaycast, nodes, nfish, HIST_SIZE,TARGET_SIZE, N_WRAYS, D_DATA, N_VIEWS, D_LOC, mean, notrandom=None ):
     """
     Loads random startpoint from path diffset
     """
+
+    if mean is not None:
+        arr = np.load( mean, allow_pickle=True )
+        meanv = arr[0]
+        std = arr[1]
+        meanTGT = arr[2]
+        stdTGT = arr[3]
+        print( "Using mean and std:")
+        print( meanv )
+        print( std )
+        print( "Using mean and std for target:" )
+        print( meanTGT )
+        print( stdTGT )
+
     nnodes = len( nodes )
     x_data_train = []
     tracks = extract_coordinates( path, nodes, [x for x in range(nfish)] )
     nLoc = getnLoc( tracks, nnodes=nnodes, nfish=nfish )
     wRays = stealWallRays( pathRaycast, COUNT_RAYS_WALLS=N_WRAYS, nfish=nfish )
+
     for f in range( nfish ):
         fdataset = np.empty( ( tracks.shape[0], D_DATA ) )
         # View
@@ -363,7 +378,7 @@ def loadStartData( path, pathRaycast, nodes, nfish, HIST_SIZE,TARGET_SIZE, N_WRA
         ftarget[-1] = fnLoc[-1]
 
         if mean is not None:
-            fdataset = np.nan_to_num( ( fdataset - mean ) / std )
+            fdataset = np.nan_to_num( ( fdataset - meanv ) / std )
             ftarget = np.nan_to_num( ( ftarget - meanTGT ) / stdTGT )
 
         x_train, y_train = multivariate_data( fdataset, ftarget, 0, None, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
@@ -449,7 +464,7 @@ def main():
         pathsTracksets = [same1]
         pathsRaycasts = [same1rays]
 
-        x_train, y_train, x_val, y_val = loadData( pathsTracksets, pathsRaycasts, nodes=[b'head', b'center', b'tail_basis', b'tail_end'], nfish=3, N_WRAYS=N_WRAYS, N_VIEWS=N_VIEWS, D_LOC=D_LOC, D_DATA=D_DATA, D_OUT=D_OUT, SPLIT=SPLIT, HIST_SIZE=HIST_SIZE, TARGET_SIZE=TARGET_SIZE, pathToSave=MEAN, getmean=True )
+        x_train, y_train, x_val, y_val = loadData( pathsTracksets, pathsRaycasts, nodes=[b'head', b'center', b'tail_basis', b'tail_end'], nfish=3, N_WRAYS=N_WRAYS, N_VIEWS=N_VIEWS, D_LOC=D_LOC, D_DATA=D_DATA, D_OUT=D_OUT, SPLIT=SPLIT, HIST_SIZE=HIST_SIZE, TARGET_SIZE=TARGET_SIZE, mean=MEAN )
         print( "x_train: {}".format( x_train.shape ) )
         print( "y_train: {}".format( y_train.shape ) )
         print( "x_val  : {}".format( x_val.shape ) )
