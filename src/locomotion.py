@@ -84,7 +84,7 @@ def convertLocmotionToBin(loco, clusters_path, path_to_save = None, probabilitie
         df.to_csv(path_to_save, sep = ";")
 
 
-def row_l2c_additional_nodes( center_xyo, nlocsN ):
+def row_l2c_additional_nodes( center_xyo, nLocsN ):
     """
     Returns 1d ndarray with new coordinates based on centerxy and orientation and given nlocs,
     center_xyo [center_x, center_y, orientation]
@@ -95,13 +95,17 @@ def row_l2c_additional_nodes( center_xyo, nlocsN ):
     # indices
     dis = [2 * x for x in range( nnodes )]
     ang = [2 * x + 1 for x in range( nnodes )]
-    print( dis )
-    print( ang )
+    xs = [2 * x for x in range( nnodes )]
+    ys = [2 * x + 1 for x in range( nnodes )]
     # loc
-    # new_angles = np.array( nlocs )[ang] + center_ori
-    # print( center_ori )
-    # print( nlocs )
-    # print( new_angles )
+    nLocsN = np.array( nLocsN )
+    new_angles = nLocsN[ang] + center_xyo[2]
+    xvals = np.cos( new_angles ) * np.abs( nLocsN[dis] )
+    yvals = np.sin( new_angles ) * np.abs( nLocsN[dis] )
+    out = np.empty( 2 * nnodes )
+    out[xs] = xvals + center_xyo[0]
+    out[ys] = yvals + center_xyo[1]
+    return out
 
 
 def row_l2c( coords, locs ):

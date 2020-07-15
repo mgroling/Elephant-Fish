@@ -225,8 +225,8 @@ def simulate( model, nnodes, nfish, startpositions, startlocs, timesteps, N_VIEW
                 inp[-D_LOC:] = nLoc[t - 1, loc_ind]
 
             # 2. Prediction
-            # nLoc[t, loc_ind] = model.predict( inp )
-            prediction = np.array( startlocs )[loc_ind]
+            prediction = model.predict( inp )
+            # prediction = np.array( startlocs )[loc_ind]
             nLoc[t, loc_ind] = prediction
 
             # 3. New positions
@@ -236,12 +236,8 @@ def simulate( model, nnodes, nfish, startpositions, startlocs, timesteps, N_VIEW
             posCenterPolar[t + 1, pos_ind_xyOri] = row_l2c( posCenterPolar[t, pos_ind_xyOri], nLoc[t, loc_ind_linAngTurn] )
             # 3.2 all the other positions
             pred_ind_otherNodes = [ 3 + x for x in range( (nnodes - 1 ) * 2 ) ]
-            print( pred_ind_otherNodes )
             pos[t + 1, pos_ind_center] = posCenterPolar[t + 1,[f * 3, f * 3 + 1]]
-            output = row_l2c_additional_nodes( posCenterPolar[t + 1], pred[pred_ind_otherNodes] )
-
-        break
-
+            output = row_l2c_additional_nodes( posCenterPolar[t + 1,pos_ind_xyOri], prediction[pred_ind_otherNodes] )
 
     return nLoc
 
@@ -314,7 +310,7 @@ def main():
     same4rays = "data/raycast_data_same4.csv"
     same5rays = "data/raycast_data_same5.csv"
 
-    if True:
+    if False:
         pathsTracksets = [same1,same3]
         pathsRaycasts = [same1rays,same3rays]
 
