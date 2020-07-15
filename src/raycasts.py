@@ -147,7 +147,7 @@ def main():
     COUNT_FISHES = 3
 
     #Extract Raycasts
-    our_wall_lines = defineLines(getRedPoints(path = "data/final_redpoint_wall.jpg"))
+    #our_wall_lines = defineLines(getRedPoints(path = "data/final_redpoint_wall.jpg"))
     # max_dist = 0
     # for i in range(0, len(our_wall_lines)):
     #     for j in range(0, len(our_wall_lines)):
@@ -157,16 +157,7 @@ def main():
 
     # print(max_dist) #max dist = 708.3784299369935
 
-    ray = Raycast(our_wall_lines, COUNT_BINS_AGENTS, WALL_RAYS_WALLS, RADIUS_FIELD_OF_VIEW_AGENTS, RADIUS_FIELD_OF_VIEW_WALLS, MAX_VIEW_RANGE, COUNT_FISHES)
-
-    file = "data/sleap_1_same3.h5"
-
-    temp = extract_coordinates(file, [b'head', b'center'], fish_to_extract=[0,1,2])[130:]
-
-    print("shape:",temp.shape)
-
-    #get rays and save them
-    ray.getRays(temp , "data/raycast_data_same3.csv")
+    updateRaycasts()
 
 if __name__ == "__main__":
     main()
