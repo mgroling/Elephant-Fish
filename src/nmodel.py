@@ -115,13 +115,22 @@ def getData( TRAINSPLIT ):
     target = nLoc[:,:f1Loc]
 
     # Standardize data
-    data_mean = data[:TRAINSPLIT].mean( axis=0 )
-    data_std = data[:TRAINSPLIT].std( axis=0 )
-    print( data[0] )
-    data = ( data - data_mean ) / data_std
-    target = ( target - data_mean[-f1Loc:] ) / data_std[-f1Loc:]
-    return np.nan_to_num( data ) , np.nan_to_num( target ), data_mean[-f1Loc:], data_std[-f1Loc:]
+    # data_mean = data[:TRAINSPLIT].mean( axis=0 )
+    # data_std = data[:TRAINSPLIT].std( axis=0 )
+    # data = ( data - data_mean ) / data_std
+    # target = ( target - data_mean[-f1Loc:] ) / data_std[-f1Loc:]
+    # return np.nan_to_num( data ) , np.nan_to_num( target ), data_mean[-f1Loc:], data_std[-f1Loc:]
+    return np.nan_to_num( data ) , np.nan_to_num( target )
 
+
+def loadData( pathsTrackset, pathsRaycasts, TRAINSPLIT, nodes, nfish ):
+    """
+    pathsTrackset and pathsRaycast need to be in same order
+    """
+    nnodes = len( nodes )
+    # Load tracks and raycasts in
+
+    return train_data, val_data, eval_interval, valinterval
 
 def simulate( model, nnodes, nfish, startpositions, timesteps ):
     """
@@ -149,9 +158,10 @@ def train():
     D_LOC = N_NODES * 2 + 1
     D_DATA = N_VIEWS + N_WRAYS + D_LOC
     D_OUT = D_LOC
-    EPOCHS = 200
+    EPOCHS = 50
 
-    data, target, data_mean, data_std = getData( TRAINSPLIT )
+    # data, target, data_mean, data_std = getData( TRAINSPLIT )
+    data, target = getData( TRAINSPLIT )
     assert D_OUT == target.shape[-1]
     # print( np.amax( data, axis=0 ) )
     # print( np.amin( data, axis=0 ) )
@@ -183,29 +193,30 @@ def train():
     history = nmodel.fit( train_data, epochs=EPOCHS, steps_per_epoch=EVALUATION_INTERVAL, validation_data=val_data, validation_steps=VAL_INTERVAL )
 
     # model = keras.models.load_model('path/to/location')
+    nmodel.save( "models/" )
+    plot_train_history( history, "4model_normalized_v0" )
 
     for x, y in val_data.take(1):
         p = nmodel.predict(x)
+        print( "predition" )
         print( p )
         print( p.shape )
         print( "target" )
         print( y )
         print( y.shape )
-        print( "unnormalized" )
-        un = p * data_std + data_mean
-        uy = y * data_std + data_mean
-        print( un )
-        print( un.p )
-        print( "target" )
-        print( uy )
-        print( uy.shape )
+        # print( "unnormalized" )
+        # un = p * data_std + data_mean
+        # uy = y * data_std + data_mean
+        # print( un )
+        # print( un.shape )
+        # print( "target" )
+        # print( uy )
+        # print( uy.shape )
 
-    nmodel.save( "models/" )
-    plot_train_history( history, "4model_normalized_v0" )
 
 
 def main():
-    pass
+    train()
 
 
 if __name__ == "__main__":
