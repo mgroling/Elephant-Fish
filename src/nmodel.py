@@ -64,7 +64,7 @@ def createNetwork( BATCH_SIZE=10, SEQ_LEN=75, COUNT_RAYS_WALLS=15, N_FISH=3, N_N
     # model.add( layers.Dense( 100 ) )
     model.add( layers.Dense( n_outputlayer ) )
     model.summary()
-    model.name = "4model_norm_v0"
+    model.name = "4model_v1"
     return model
 
 
@@ -109,7 +109,7 @@ def getData( TRAINSPLIT ):
     data[:,0:nView.shape[-1]] = nView
     data[:,nView.shape[-1]:-f1Loc] = wallrays
     # duplicate loc at beginning ( i know i know ... )
-    data[0:,-f1Loc:] = nLoc[0,:f1Loc]
+    data[0,-f1Loc:] = nLoc[0,:f1Loc]
     data[1:,-f1Loc:] = nLoc[:,:f1Loc]
     data = data[:-1]
     target = nLoc[:,:f1Loc]
@@ -123,14 +123,43 @@ def getData( TRAINSPLIT ):
     return np.nan_to_num( data ) , np.nan_to_num( target )
 
 
-def loadData( pathsTrackset, pathsRaycasts, TRAINSPLIT, nodes, nfish ):
+def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_LOC, D_DATA, D_OUT, SPLIT=0.9  ):
     """
     pathsTrackset and pathsRaycast need to be in same order
     """
+    assert len( pathsTracksets ) == len( pathsRaycasts )
     nnodes = len( nodes )
     # Load tracks and raycasts in
+    for i in range( len( pathsTracksets ) ):
+        tracks = extract_coordinates( pathsTracksets[i], nodes, [x for x in range(nfish)] )
+        wRays = stealWallRays( pathsRaycasts[i], COUNT_RAYS_WALLS=N_WRAYS, nfish=nfish )
+        nLoc = getnLoc( tracks, nnodes=nnodes, nfish=nfish )
+        for f in range( nfish ):
+            fdataset = np.empty( ( tracks.shape[0], D_DATA ) )
+            # View
+            track_indices_ch = [f * nnodes * 2, f * nnodes * 2 + 1, f * nnodes * 2 + 2, f * nnodes * 2 + 3]
+            track_iSubtract = [x + nnodes * 2 * f for x in range( nnodes * 2 )]
+            track_indices_otherFish = [x for x in range( nnodes * nfish * 2 ) if x not in track_iSubtract]
+            fnView = getnView( tracks[:,track_indices_ch], tracks[:,track_indices_otherFish], nfish = nfish )
+            # RayCasts
+            wRays_indices_fish = [f * N_WRAYS + x for x in range( N_WRAYS )]
+            fwrays = wRays[:,wRays_indices_fish]
+            # Locomotion
+            nLoc_indices = [f * ( nnodes * 2 + 1 ) + x for x in range( nnodes * 2 + 1 )]
+            fnLoc = nLoc[:,nLoc_indices]
+            # Merge to dataset
+            fdataset[:,:N_VIEWS] = fnView
+            fdataset[:,N_VIEWS:-D_LOC] = fwrays
+            fdataset[1:,-D_LOC:] = fnLoc
+            fdataset[0,-D_LOC:] = fnLoc[0]
+            print( fdataset[0] )
+            print( fdataset )
 
-    return train_data, val_data, eval_interval, valinterval
+
+
+
+    # return train_data, val_data, eval_interval, val_interval
+
 
 def simulate( model, nnodes, nfish, startpositions, timesteps ):
     """
@@ -147,7 +176,7 @@ def simulate( model, nnodes, nfish, startpositions, timesteps ):
 
 def train():
     TRAINSPLIT = 15000
-    BATCH_SIZE = 10
+    BATCH_SIZE = 20
     BUFFER_SIZE= 10000
     HIST_SIZE = 70 # frames to be looked on or SEQ_LEN
     TARGET_SIZE = 0
@@ -180,8 +209,8 @@ def train():
     nmodel = tf.keras.models.Sequential()
     print( "prediction: ({}, {})".format( HIST_SIZE, D_DATA ) )
     print( "input shape: {}".format( x_train.shape[-2:] ) )
-    nmodel.add( tf.keras.layers.LSTM( D_DATA * 4, input_shape=x_train.shape[-2:] ) )
-    nmodel.add( tf.keras.layers.Dense( 100 ) )
+    nmodel.add( tf.keras.layers.LSTM( D_DATA * 10, input_shape=x_train.shape[-2:] ) )
+    nmodel.add( tf.keras.layers.Dense( D_DATA * 4 ) )
     nmodel.add( tf.keras.layers.Dense( D_OUT ) )
 
     nmodel.compile( optimizer=tf.keras.optimizers.RMSprop(), loss='mean_squared_error' )
@@ -193,8 +222,8 @@ def train():
     history = nmodel.fit( train_data, epochs=EPOCHS, steps_per_epoch=EVALUATION_INTERVAL, validation_data=val_data, validation_steps=VAL_INTERVAL )
 
     # model = keras.models.load_model('path/to/location')
-    nmodel.save( "models/" )
-    plot_train_history( history, "4model_normalized_v0" )
+    nmodel.save( "models/4model_v3" )
+    plot_train_history( history, "4model_v3" )
 
     for x, y in val_data.take(1):
         p = nmodel.predict(x)
@@ -216,6 +245,33 @@ def train():
 
 
 def main():
+    SPLIT = 0.9
+    BATCH_SIZE = 20
+    BUFFER_SIZE= 10000
+    EPOCHS = 50
+    HIST_SIZE = 35 # frames to be looked on or SEQ_LEN
+    TARGET_SIZE = 0
+    N_NODES = 4
+    N_FISH = 3
+    N_WRAYS = 15
+    N_VIEWS = (N_FISH - 1 ) * N_NODES * 2
+    D_LOC = N_NODES * 2 + 1
+    D_DATA = N_VIEWS + N_WRAYS + D_LOC
+    D_OUT = D_LOC
+
+    same1 = "data/sleap_1_same1.h5"
+    same3 = "data/sleap_1_same3.h5"
+    same4 = "data/sleap_1_same4.h5"
+    same5 = "data/sleap_1_same5.h5"
+    same1rays = "data/raycast_data_same1.csv"
+    same3rays = "data/raycast_data_same3.csv"
+    same4rays = "data/raycast_data_same4.csv"
+    same5rays = "data/raycast_data_same5.csv"
+
+    pathsTracksets = [same1,same3,same4,same5]
+    pathsRaycasts = [same1rays,same3rays,same4rays,same5rays]
+
+    # loadData( pathsTracksets, pathsRaycasts, nodes=[b'head', b'center', b'tail_basis', b'tail_end'], nfish=3, N_WRAYS=N_WRAYS, N_VIEWS=N_VIEWS, D_LOC=D_LOC, D_DATA=D_DATA, D_OUT=D_OUT, SPLIT=SPLIT )
     train()
 
 
