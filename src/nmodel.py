@@ -1,4 +1,5 @@
 # Python file for the nmodel
+import os
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -47,29 +48,18 @@ def stealWallRays( path, COUNT_RAYS_WALLS=15, nfish=3 ):
     return raycasts[:,-15 * nfish:]
 
 
-def createNetwork( BATCH_SIZE=10, SEQ_LEN=75, COUNT_RAYS_WALLS=15, N_FISH=3, N_NODES=4 ):
+def createModel( name, U_LSTM, U_DENSE, U_OUT, input_shape ):
     """
     Creates and returns an RNN model
     """
-    N_VIEWS =  (N_FISH - 1 ) * N_NODES * 2
-    N_LOC = N_NODES * 2 + 1
-    dimdata = N_VIEWS + COUNT_RAYS_WALLS + N_LOC
-    n_outputlayer = N_NODES * 20 + 20
-    # (batch,)
-    ishape = ( BATCH_SIZE, SEQ_LEN, dimdata )
-
-    model = keras.Sequential()
-    model.add( layers.InputLayer( batch_input_shape=ishape ) )
-    model.add( layers.LSTM(dimdata) )
-    # model.add( layers.Dense( 100 ) )
-    model.add( layers.Dense( n_outputlayer ) )
-    model.summary()
-    model.name = "4model_v1"
-    return model
-
-
-def trainNetwork( network, nLoc, nView, wallRays, BATCH_SIZE=10, SEQ_LEN=75, COUNT_RAYS_WALLS=15, N_FISH=3, N_NODES=4 ):
-    pass
+    nmodel = tf.keras.models.Sequential( name=name )
+    print( "input shape: {}".format( input_shape ) )
+    nmodel.add( tf.keras.layers.LSTM( U_LSTM , input_shape=input_shape ) )
+    nmodel.add( tf.keras.layers.Dense( U_DENSE ) )
+    nmodel.add( tf.keras.layers.Dense( U_OUT ) )
+    nmodel.compile( optimizer=tf.keras.optimizers.RMSprop(), loss='mean_squared_error' )
+    nmodel.summary()
+    return nmodel
 
 
 def multivariate_data( dataset, target, start_index, end_index, history_size, target_size, step, single_step=False ):
@@ -123,17 +113,25 @@ def getData( TRAINSPLIT ):
     return np.nan_to_num( data ) , np.nan_to_num( target )
 
 
-def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_LOC, D_DATA, D_OUT, SPLIT=0.9  ):
+def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_LOC, D_DATA, D_OUT, HIST_SIZE, TARGET_SIZE, SPLIT=0.9 ):
     """
     pathsTrackset and pathsRaycast need to be in same order
     """
     assert len( pathsTracksets ) == len( pathsRaycasts )
     nnodes = len( nodes )
     # Load tracks and raycasts in
+    x_data_train = []
+    y_data_train = []
+    x_data_val = []
+    y_data_val = []
     for i in range( len( pathsTracksets ) ):
-        tracks = extract_coordinates( pathsTracksets[i], nodes, [x for x in range(nfish)] )
+        if pathsTracksets[i] == "data/sleap_1_same3.h5":
+            tracks = extract_coordinates( pathsTracksets[i], nodes, [x for x in range(nfish)] )[130:]
+        else:
+            tracks = extract_coordinates( pathsTracksets[i], nodes, [x for x in range(nfish)] )
         wRays = stealWallRays( pathsRaycasts[i], COUNT_RAYS_WALLS=N_WRAYS, nfish=nfish )
         nLoc = getnLoc( tracks, nnodes=nnodes, nfish=nfish )
+        splitindex = int( tracks.shape[0] * SPLIT )
         for f in range( nfish ):
             fdataset = np.empty( ( tracks.shape[0], D_DATA ) )
             # View
@@ -152,13 +150,25 @@ def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_L
             fdataset[:,N_VIEWS:-D_LOC] = fwrays
             fdataset[1:,-D_LOC:] = fnLoc
             fdataset[0,-D_LOC:] = fnLoc[0]
-            print( fdataset[0] )
-            print( fdataset )
+            # Target
+            ftarget = np.empty( ( tracks.shape[0], D_LOC ) )
+            ftarget[:-1] = fnLoc
+            ftarget[-1] = fnLoc[-1]
 
+            x_train, y_train = multivariate_data( fdataset, ftarget, 0, splitindex, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
+            x_data_train.append( x_train )
+            y_data_train.append( y_train )
 
+            x_val, y_val = multivariate_data( fdataset, ftarget, splitindex, None, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
+            x_data_val.append( x_val )
+            y_data_val.append( y_val )
 
+    x_data_train = np.concatenate( x_data_train, axis=0 )
+    y_data_train = np.concatenate( y_data_train, axis=0 )
+    x_data_val = np.concatenate( x_data_val, axis=0 )
+    y_data_val = np.concatenate( y_data_val, axis=0 )
 
-    # return train_data, val_data, eval_interval, val_interval
+    return x_data_train, y_data_train, x_data_val, y_data_val
 
 
 def simulate( model, nnodes, nfish, startpositions, timesteps ):
@@ -209,7 +219,7 @@ def train():
     nmodel = tf.keras.models.Sequential()
     print( "prediction: ({}, {})".format( HIST_SIZE, D_DATA ) )
     print( "input shape: {}".format( x_train.shape[-2:] ) )
-    nmodel.add( tf.keras.layers.LSTM( D_DATA * 10, input_shape=x_train.shape[-2:] ) )
+    nmodel.add( tf.keras.layers.LSTM( D_DATA * 4, input_shape=x_train.shape[-2:] ) )
     nmodel.add( tf.keras.layers.Dense( D_DATA * 4 ) )
     nmodel.add( tf.keras.layers.Dense( D_OUT ) )
 
@@ -243,13 +253,47 @@ def train():
         # print( uy.shape )
 
 
+def getDatasets( x_train, y_train, x_val, y_val, BATCH_SIZE, BUFFER_SIZE ):
+    """
+    Train the network
+    """
+    # Put data into datasets
+    train_data = tf.data.Dataset.from_tensor_slices( ( x_train, y_train ) )
+    train_data = train_data.cache().shuffle( BUFFER_SIZE ).batch( BATCH_SIZE ).repeat()
+
+    val_data = tf.data.Dataset.from_tensor_slices( ( x_val, y_val ) )
+    val_data = val_data.batch( BATCH_SIZE ).repeat()
+
+    return train_data, val_data
+
+
+def saveModel( path, model ):
+    """
+    saves model
+    """
+    # handle dir
+    if not os.path.isdir( path ):
+        # create dir
+        try:
+            os.mkdir( path )
+        except OSError:
+            print("Dir Creation failed")
+    if path[-1] != "/":
+        path = path + "/"
+
+    return model.save( path )
 
 def main():
+    """
+    """
+    # Parameters
+    LOAD = None
+    NAME = "4model_v5"
     SPLIT = 0.9
     BATCH_SIZE = 20
     BUFFER_SIZE= 10000
     EPOCHS = 50
-    HIST_SIZE = 35 # frames to be looked on or SEQ_LEN
+    HIST_SIZE = 70 # frames to be looked on or SEQ_LEN
     TARGET_SIZE = 0
     N_NODES = 4
     N_FISH = 3
@@ -258,6 +302,11 @@ def main():
     D_LOC = N_NODES * 2 + 1
     D_DATA = N_VIEWS + N_WRAYS + D_LOC
     D_OUT = D_LOC
+    U_LSTM = 4 * D_LOC
+    U_DENSE = 2 * D_LOC
+    U_OUT = D_LOC
+
+    NAME = NAME + "_" + str( U_LSTM ) + "_" + str( U_DENSE ) + "_" + str( U_OUT ) + "_" + str( BATCH_SIZE ) + "_" + str( HIST_SIZE )
 
     same1 = "data/sleap_1_same1.h5"
     same3 = "data/sleap_1_same3.h5"
@@ -271,8 +320,35 @@ def main():
     pathsTracksets = [same1,same3,same4,same5]
     pathsRaycasts = [same1rays,same3rays,same4rays,same5rays]
 
-    # loadData( pathsTracksets, pathsRaycasts, nodes=[b'head', b'center', b'tail_basis', b'tail_end'], nfish=3, N_WRAYS=N_WRAYS, N_VIEWS=N_VIEWS, D_LOC=D_LOC, D_DATA=D_DATA, D_OUT=D_OUT, SPLIT=SPLIT )
-    train()
+    x_train, y_train, x_val, y_val = loadData( pathsTracksets, pathsRaycasts, nodes=[b'head', b'center', b'tail_basis', b'tail_end'], nfish=3, N_WRAYS=N_WRAYS, N_VIEWS=N_VIEWS, D_LOC=D_LOC, D_DATA=D_DATA, D_OUT=D_OUT, SPLIT=SPLIT, HIST_SIZE=HIST_SIZE, TARGET_SIZE=TARGET_SIZE )
+    print( "x_train: {}".format( x_train.shape ) )
+    print( "y_train: {}".format( y_train.shape ) )
+    print( "x_val  : {}".format( x_val.shape ) )
+    print( "y_val  : {}".format( y_val.shape ) )
+
+    traindata, valdata = getDatasets( x_train, y_train, x_val, y_val, BATCH_SIZE=BATCH_SIZE, BUFFER_SIZE=BUFFER_SIZE )
+
+    if LOAD is None:
+        nmodel = createModel( NAME, U_LSTM, U_DENSE, U_OUT, x_train.shape[-2:] )
+    else:
+        nmodel = tf.keras.models.load_model( LOAD )
+
+    EVAL_INTERVAL = ( x_train.shape[0] ) // BATCH_SIZE
+    VAL_INTERVAL = ( x_val.shape[0] ) // BATCH_SIZE
+
+    history = nmodel.fit( traindata, epochs=EPOCHS, steps_per_epoch=EVAL_INTERVAL, validation_data=valdata, validation_steps=VAL_INTERVAL )
+
+    saveModel( NAME, nmodel )
+    plot_train_history( history, NAME )
+
+    for x, y in valdata.take(1):
+        p = nmodel.predict(x)
+        print( "predition" )
+        print( p )
+        print( p.shape )
+        print( "target" )
+        print( y )
+        print( y.shape )
 
 
 if __name__ == "__main__":
