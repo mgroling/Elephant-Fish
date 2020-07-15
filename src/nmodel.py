@@ -31,13 +31,34 @@ def getnView( tracksFish, tracksOther, nfish=3 ):
     # 2. compute values for every fish and node
     for f in range( nfish - 1 ):
         for n in range( nnodes ):
-            ixy = [nnodes * f + 2 * n, nnodes * f + 2 * n + 1]
+            ixy = [2 * nnodes * f + 2 * n, 2 * nnodes * f + 2 * n + 1]
             # node - center
             vec_cn = tracksOther[:,ixy] - center
             out[:,nnodes * 2 * f + 2 * n] = getDistances( tracksOther[:,ixy], center )
             out[:,nnodes * 2 * f + 2 * n + 1] = getAngles( vec_ch, vec_cn )
 
     return out
+
+def getnViewSingle( posFish, posOther, nnodes, nfish=3 ):
+    """
+    Same as above but for one row
+    """
+    center = np.array( posFish[2:4] )
+    head = np.array( posFish[0:2] )
+    vec_ch = head - center
+    print( center )
+    print( posFish )
+    print( posOther )
+    for f in range( nfish - 1 ):
+        for n in range( nnodes ):
+            ixy = [2 * nnodes * f + 2 * n, 2 * nnodes * f + 2 * n + 1]
+            # node - center
+            vec_cn = posOther[ixy] - center
+            print( "p ", posOther[ixy] )
+            print( "u ", vec_cn )
+    # print( head )
+    # print( vec_ch )
+    # print( posFish )
 
 
 def stealWallRays( path, COUNT_RAYS_WALLS=15, nfish=3 ):
@@ -48,14 +69,19 @@ def stealWallRays( path, COUNT_RAYS_WALLS=15, nfish=3 ):
     return raycasts[:,-15 * nfish:]
 
 
-def createModel( name, U_LSTM, U_DENSE, U_OUT, input_shape ):
+def createModel( name, U_LSTM, U_DENSE, U_OUT, input_shape, dropout=None ):
     """
     Creates and returns an RNN model
+    droupout example: [0.1, 0.1]
     """
     nmodel = tf.keras.models.Sequential( name=name )
     print( "input shape: {}".format( input_shape ) )
     nmodel.add( tf.keras.layers.LSTM( U_LSTM , input_shape=input_shape ) )
+    if dropout is not None:
+        nmodel.add( tf.keras.layers.Dropout( dropout[0] ) )
     nmodel.add( tf.keras.layers.Dense( U_DENSE ) )
+    if dropout is not None:
+        nmodel.add( tf.keras.layers.Dropout( dropout[1] ) )
     nmodel.add( tf.keras.layers.Dense( U_OUT ) )
     nmodel.compile( optimizer=tf.keras.optimizers.RMSprop(), loss='mean_squared_error' )
     nmodel.summary()
@@ -147,12 +173,29 @@ def simulate( model, nnodes, nfish, startpositions, timesteps ):
     """
     returns nLoc array with simulation predicitons
     """
+    assert len( startpositions ) == nnodes * 2 * nfish
     nLoc = np.empty( (timesteps, (nnodes * 2 + 1) * nfish ) )
     pos = np.empty( (timesteps + 1, nnodes * 2 * nfish ) )
     pos[0] = startpositions
+    #
+    pos_ind = [[]]
     # main loop
     for t in range( timesteps ):
-        pass
+        for f in range( nfish ):
+            # 1. Compute input for fish
+            # 2. Compute prediction
+            # 3. Compute new positions
+
+            # 1. Input for fish
+            # nView
+            pos_indices_ch = [f * nnodes * 2, f * nnodes * 2 + 1, f * nnodes * 2 + 2, f * nnodes * 2 + 3]
+            pos_iSubtract = [x + nnodes * 2 * f for x in range( nnodes * 2 )]
+            pos_indices_otherFish = [x for x in range( nnodes * nfish * 2 ) if x not in pos_iSubtract]
+            print( pos[t] )
+            fnView = getnViewSingle( pos[t,pos_indices_ch], pos[t,pos_indices_otherFish], nnodes=nnodes, nfish = nfish )
+            break
+        break
+
 
     return nLoc
 
@@ -192,13 +235,11 @@ def main():
     """
     """
     # Parameters
-    LOAD = None
-    NAME = "4model_v5"
     SPLIT = 0.9
-    BATCH_SIZE = 20
+    BATCH_SIZE = 10
     BUFFER_SIZE= 10000
     EPOCHS = 50
-    HIST_SIZE = 70 # frames to be looked on or SEQ_LEN
+    HIST_SIZE = 30 # frames to be looked on or SEQ_LEN
     TARGET_SIZE = 0
     N_NODES = 4
     N_FISH = 3
@@ -207,11 +248,13 @@ def main():
     D_LOC = N_NODES * 2 + 1
     D_DATA = N_VIEWS + N_WRAYS + D_LOC
     D_OUT = D_LOC
-    U_LSTM = 4 * D_LOC
-    U_DENSE = 2 * D_LOC
+    U_LSTM = 4 * D_DATA
+    U_DENSE = 2 * D_DATA
     U_OUT = D_LOC
-
+    NAME = "4model_v5"
     NAME = NAME + "_" + str( U_LSTM ) + "_" + str( U_DENSE ) + "_" + str( U_OUT ) + "_" + str( BATCH_SIZE ) + "_" + str( HIST_SIZE )
+    LOAD = "4model_v5_36_18_9_20_70"
+
 
     same1 = "data/sleap_1_same1.h5"
     same3 = "data/sleap_1_same3.h5"
@@ -222,38 +265,35 @@ def main():
     same4rays = "data/raycast_data_same4.csv"
     same5rays = "data/raycast_data_same5.csv"
 
-    pathsTracksets = [same1,same3,same4,same5]
-    pathsRaycasts = [same1rays,same3rays,same4rays,same5rays]
+    if True:
+        pathsTracksets = [same1,same3,same4,same5]
+        pathsRaycasts = [same1rays,same3rays,same4rays,same5rays]
 
-    x_train, y_train, x_val, y_val = loadData( pathsTracksets, pathsRaycasts, nodes=[b'head', b'center', b'tail_basis', b'tail_end'], nfish=3, N_WRAYS=N_WRAYS, N_VIEWS=N_VIEWS, D_LOC=D_LOC, D_DATA=D_DATA, D_OUT=D_OUT, SPLIT=SPLIT, HIST_SIZE=HIST_SIZE, TARGET_SIZE=TARGET_SIZE )
-    print( "x_train: {}".format( x_train.shape ) )
-    print( "y_train: {}".format( y_train.shape ) )
-    print( "x_val  : {}".format( x_val.shape ) )
-    print( "y_val  : {}".format( y_val.shape ) )
+        x_train, y_train, x_val, y_val = loadData( pathsTracksets, pathsRaycasts, nodes=[b'head', b'center', b'tail_basis', b'tail_end'], nfish=3, N_WRAYS=N_WRAYS, N_VIEWS=N_VIEWS, D_LOC=D_LOC, D_DATA=D_DATA, D_OUT=D_OUT, SPLIT=SPLIT, HIST_SIZE=HIST_SIZE, TARGET_SIZE=TARGET_SIZE )
+        print( "x_train: {}".format( x_train.shape ) )
+        print( "y_train: {}".format( y_train.shape ) )
+        print( "x_val  : {}".format( x_val.shape ) )
+        print( "y_val  : {}".format( y_val.shape ) )
 
-    traindata, valdata = getDatasets( x_train, y_train, x_val, y_val, BATCH_SIZE=BATCH_SIZE, BUFFER_SIZE=BUFFER_SIZE )
+        traindata, valdata = getDatasets( x_train, y_train, x_val, y_val, BATCH_SIZE=BATCH_SIZE, BUFFER_SIZE=BUFFER_SIZE )
 
-    if LOAD is None:
         nmodel = createModel( NAME, U_LSTM, U_DENSE, U_OUT, x_train.shape[-2:] )
+        saveModel( NAME, nmodel )
+
+        EVAL_INTERVAL = ( x_train.shape[0] ) // BATCH_SIZE
+        VAL_INTERVAL = ( x_val.shape[0] ) // BATCH_SIZE
+
+        history = nmodel.fit( traindata, epochs=EPOCHS, steps_per_epoch=EVAL_INTERVAL, validation_data=valdata, validation_steps=VAL_INTERVAL )
+
+        saveModel( NAME, nmodel )
+        plot_train_history( history, NAME )
     else:
-        nmodel = tf.keras.models.load_model( LOAD )
+        # nmodel = tf.keras.models.load_model( LOAD )
+        nmodel = None
+        startpositions = [635.82489014, 218.66400146, 614.24102783, 213.71218872, 569.61773682, 211.43319702, 563.06671143, 211.47904968, 556.49041748, 271.07836914, 539.67126465, 285.99697876, 511.53341675, 321.82028198, 509.9105835, 328.56533813, 640.18927002, 429.0065918, 633.73266602, 404.88540649, 624.15777588, 356.77297974, 625.47979736, 348.31661987]
+        tracks = extract_coordinates( same1, [b'head', b'center', b'tail_basis', b'tail_end'] )[0]
+        simulate( nmodel, N_NODES, N_FISH, startpositions, 1000 )
 
-    EVAL_INTERVAL = ( x_train.shape[0] ) // BATCH_SIZE
-    VAL_INTERVAL = ( x_val.shape[0] ) // BATCH_SIZE
-
-    history = nmodel.fit( traindata, epochs=EPOCHS, steps_per_epoch=EVAL_INTERVAL, validation_data=valdata, validation_steps=VAL_INTERVAL )
-
-    saveModel( NAME, nmodel )
-    plot_train_history( history, NAME )
-
-    for x, y in valdata.take(1):
-        p = nmodel.predict(x)
-        print( "predition" )
-        print( p )
-        print( p.shape )
-        print( "target" )
-        print( y )
-        print( y.shape )
 
 
 if __name__ == "__main__":
