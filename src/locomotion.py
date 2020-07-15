@@ -84,10 +84,30 @@ def convertLocmotionToBin(loco, clusters_path, path_to_save = None, probabilitie
         df.to_csv(path_to_save, sep = ";")
 
 
+def row_l2c_additional_nodes( center_xyo, nlocsN ):
+    """
+    Returns 1d ndarray with new coordinates based on centerxy and orientation and given nlocs,
+    center_xyo [center_x, center_y, orientation]
+    Output: [node1_x, node1_y, node2_x, node2_y, ...]
+    """
+    nnodes = len( nLocsN ) // 2
+
+    # indices
+    dis = [2 * x for x in range( nnodes )]
+    ang = [2 * x + 1 for x in range( nnodes )]
+    print( dis )
+    print( ang )
+    # loc
+    # new_angles = np.array( nlocs )[ang] + center_ori
+    # print( center_ori )
+    # print( nlocs )
+    # print( new_angles )
+
+
 def row_l2c( coords, locs ):
     """
     Returns 1d ndarray with new coordinates based on previos coordinades and given locomotions,
-    Output: [center1_x, center1_y, orientation1, ...]
+    Output: [center1_x, center1_y, orientation1, center2_x, ...]
     """
     nfish = len(coords) // 3
 
@@ -99,6 +119,7 @@ def row_l2c( coords, locs ):
     lin = [3 * x for x in range(nfish)]
     ang = [3 * x + 1 for x in range(nfish)]
     ori = [3 * x + 2 for x in range(nfish)]
+
     # computation
     new_angles = ( coords[os] + locs[ang] ) % ( np.pi * 2 )
     xvals = np.cos( new_angles ) * np.abs( locs[lin] )
@@ -148,7 +169,7 @@ def convLocToCart( loc, startpoints ):
         out[0,3 * f] = startpoints[4 * f + 2]
         out[0,3 * f + 1] = startpoints[4 * f + 3]
         # Angle between Fish Orientation and the unit vector
-        out[0,3 * f + 2] = getAngle( (1,0,), (startpoints[4 * f] - startpoints[4 * f + 2], startpoints[4 * f + 1] - startpoints[4 * f + 3],), "radians" )
+        out[0,3 * f + 2] = getAngle( ( 1, 0 ), (startpoints[4 * f] - startpoints[4 * f + 2], startpoints[4 * f + 1] - startpoints[4 * f + 3],), "radians" )
 
     for i in range(0, row):
         out[i + 1] = row_l2c( out[i], loc[i] )

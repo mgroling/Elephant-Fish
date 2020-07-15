@@ -8,7 +8,7 @@ from tensorflow.keras import layers
 
 from functions import getDistances, getAngles, getDistance, getAngle, defineLines, getRedPoints
 from reader import extract_coordinates
-from locomotion import getnLoc
+from locomotion import getnLoc, row_l2c, row_l2c_additional_nodes, row_l2c_additional_nodes
 from evaluation import plot_train_history
 from raycasts import Raycast
 
@@ -173,43 +173,73 @@ def simulate( model, nnodes, nfish, startpositions, startlocs, timesteps, N_VIEW
     assert len( startpositions ) == nnodes * 2 * nfish
     assert len( startlocs ) == D_LOC * nfish
     assert nnodes >= 2
-    nLoc = np.empty( (timesteps, (nnodes * 2 + 1) * nfish ) )
-    pos = np.empty( (timesteps + 1, nnodes * 2 * nfish ) )
+    nLoc = np.empty( ( timesteps, (nnodes * 2 + 1) * nfish ) )
+    pos = np.empty( ( timesteps + 1, nnodes * 2 * nfish ) ) # saves x, y val for every node
+    posCenterPolar = np.empty( (timesteps + 1, 3 * nfish ) ) # saves c_x, c_y, orienation
+    # Initiliaze first row
     pos[0] = startpositions
+    for f in range(nfish):
+        posCenterPolar[0, 3 * f] = startpositions[nnodes * 2 * f + 2]
+        posCenterPolar[0, 3 * f + 1] = startpositions[nnodes * 2 * f + 3]
+        # Angle between Fish Orientation and the unit vector
+        # Head - Center
+        x = ( startpositions[nnodes * 2 * f] - startpositions[nnodes * 2 * f + 2] )
+        y = ( startpositions[nnodes * 2 * f + 1] - startpositions[nnodes * 2 * f + 3] )
+        posCenterPolar[0, 3 * f + 2] = getAngle( ( 1, 0 ), ( x, y ), "radians" )
     # MARCS RAYCAST OBJECT
     walllines = defineLines( getRedPoints(path = "data/final_redpoint_wall.jpg") )
     unnecessary = 10
     raycast_object = Raycast( walllines, unnecessary, N_WRAYS, unnecessary, FOV_WALLS, MAX_VIEW_RANGE, nfish )
-    print( pos.shape )
-    pos_ind = [[]]
+
     # main loop
     for t in range( timesteps ):
+        if t % 1000 == 0:
+            print( "Frame {:6}".format( t ) )
         for f in range( nfish ):
             # 1. Compute input for fish
             # 2. Compute prediction
             # 3. Compute new positions
 
-            inp = np.empty( (N_VIEWS + N_WRAYS + D_LOC) )
             # 1. Input for fish
+            inp = np.empty( (N_VIEWS + N_WRAYS + D_LOC) )
+
             # nView
             pos_indices_ch = [f * nnodes * 2, f * nnodes * 2 + 1, f * nnodes * 2 + 2, f * nnodes * 2 + 3]
             pos_iSubtract = [x + nnodes * 2 * f for x in range( nnodes * 2 )]
             pos_indices_otherFish = [x for x in range( nnodes * nfish * 2 ) if x not in pos_iSubtract]
             inp[:N_VIEWS] = getnViewSingle( pos[t,pos_indices_ch], pos[t,pos_indices_otherFish], nnodes=nnodes, nfish = nfish )
+
             # wRays
-            fcenter = pos[t,[f * nnodes * 2 + 2, f * nnodes * 2 + 3]]
-            fhead = pos[t,[f * nnodes * 2, f * nnodes * 2 + 1]]
+            pos_ind_center = [f * nnodes * 2 + 2, f * nnodes * 2 + 3]
+            pos_ind_head = [f * nnodes * 2, f * nnodes * 2 + 1]
+            fcenter = pos[t,pos_ind_center]
+            fhead = pos[t,pos_ind_head]
             vec_ch = fhead - fcenter
             inp[N_VIEWS:-D_LOC] = raycast_object._getWallRays( fcenter, vec_ch )
+
             # nLoc
             loc_ind = [f * D_LOC + x for x in range(D_LOC)]
             if t == 0:
-                inp[-D_LOC:] = startlocs[loc_ind]
+                inp[-D_LOC:] = np.array( startlocs )[loc_ind]
             else:
-                inp[-D_LOC:] = nLoc[loc_ind]
-            print( loc_ind )
-            print( inp.shape )
-            print( inp )
+                inp[-D_LOC:] = nLoc[t - 1, loc_ind]
+
+            # 2. Prediction
+            # nLoc[t, loc_ind] = model.predict( inp )
+            prediction = np.array( startlocs )[loc_ind]
+            nLoc[t, loc_ind] = prediction
+
+            # 3. New positions
+            # 3.1 new center position
+            loc_ind_linAngTurn = [f * D_LOC, f * D_LOC + 1, f * D_LOC + 2]
+            pos_ind_xyOri = [f * 3, f * 3 + 1, f * 3 + 2]
+            posCenterPolar[t + 1, pos_ind_xyOri] = row_l2c( posCenterPolar[t, pos_ind_xyOri], nLoc[t, loc_ind_linAngTurn] )
+            # 3.2 all the other positions
+            pred_ind_otherNodes = [ 3 + x for x in range( (nnodes - 1 ) * 2 ) ]
+            print( pred_ind_otherNodes )
+            pos[t + 1, pos_ind_center] = posCenterPolar[t + 1,[f * 3, f * 3 + 1]]
+            output = row_l2c_additional_nodes( posCenterPolar[t + 1], pred[pred_ind_otherNodes] )
+
         break
 
 
@@ -255,7 +285,7 @@ def main():
     BATCH_SIZE = 10
     BUFFER_SIZE= 10000
     EPOCHS = 50
-    HIST_SIZE = 70 # frames to be looked on or SEQ_LEN
+    HIST_SIZE = 120 # frames to be looked on or SEQ_LEN
     TARGET_SIZE = 0
     N_NODES = 4
     N_FISH = 3
@@ -265,11 +295,11 @@ def main():
     D_DATA = N_VIEWS + N_WRAYS + D_LOC
     D_OUT = D_LOC
     U_LSTM = D_DATA
-    U_DENSE = D_DATA
+    U_DENSE = D_DATA // 3
     U_OUT = D_LOC
     FOV_WALLS = 180
     MAX_VIEW_RANGE = 709
-    NAME = "4model_v6"
+    NAME = "4model_v7"
     NAME = NAME + "_" + str( U_LSTM ) + "_" + str( U_DENSE ) + "_" + str( U_OUT ) + "_" + str( BATCH_SIZE ) + "_" + str( HIST_SIZE )
     LOAD = "4model_v5_36_18_9_20_70"
 
@@ -296,7 +326,7 @@ def main():
 
         traindata, valdata = getDatasets( x_train, y_train, x_val, y_val, BATCH_SIZE=BATCH_SIZE, BUFFER_SIZE=BUFFER_SIZE )
 
-        nmodel = createModel( NAME, U_LSTM, U_DENSE, U_OUT, x_train.shape[-2:], dropout=[0.1,0.1] )
+        nmodel = createModel( NAME, U_LSTM, U_DENSE, U_OUT, x_train.shape[-2:], dropout=[0.3,0.3] )
         saveModel( NAME, nmodel )
 
         EVAL_INTERVAL = ( x_train.shape[0] ) // BATCH_SIZE
