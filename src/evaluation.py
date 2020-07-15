@@ -562,14 +562,14 @@ def main():
     # create_all_plots_together()
     # create_all_plots_separate()
     # get locomotion
-    df = pd.read_csv("data/locomotion_simulation.csv", index_col=0, sep = ";")
-    loc = df.to_numpy()
-    startpolar, distances = readStartposition( "data/startposition_simulation.txt" )
-    polarTracks = np.array([startpolar])
-    startpositions = convPolarToCart( polarTracks, distances )[0]
-    tracks = locomotion.convLocToCart( loc, startpositions )
-    create_plots( tracks, path="figures/simulation" )
-    visualization.addTracksOnTank( "I:/Code/SWP/sim_tracks.avi", tracks, skeleton=[(0,1)], showvid=False )#"C:/Users/Gabriel/Videos/sim_tracks.avi"
+    df = pd.read_csv("4model_v7_40_20_9_10_100tracks.csv", index_col=0, sep = ";")
+    tracks = df.to_numpy()
+    # startpolar, distances = readStartposition( "data/startposition_simulation.txt" )
+    # polarTracks = np.array([startpolar])
+    # startpositions = convPolarToCart( polarTracks, distances )[0]
+    # tracks = locomotion.convLocToCart( loc, startpositions )
+    # create_plots( tracks[:,0,1,2,3,8,9,10,11,16,17,18,19], path="figures/simulation_4model_v7_40_20_9_10_100" )
+    visualization.addTracksOnTank( "C:/Users/Gabriel/Videos/sim_tracks_4model_v7_40_20_9_10_100.avi", tracks, skeleton=[(0,1),(1,2),(2,3)], psize=2, showvid=True ) #"I:/Code/SWP/sim_tracks.avi"
 
 if __name__ == "__main__":
     main()

@@ -108,17 +108,33 @@ def multivariate_data( dataset, target, start_index, end_index, history_size, ta
     return np.array( data ), np.array( labels )
 
 
-def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_LOC, D_DATA, D_OUT, HIST_SIZE, TARGET_SIZE, SPLIT=0.9 ):
+def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_LOC, D_DATA, D_OUT, HIST_SIZE, TARGET_SIZE, SPLIT=0.9, getmean=False, pathToSave=None, mean=None ):
     """
     pathsTrackset and pathsRaycast need to be in same order
     """
     assert len( pathsTracksets ) == len( pathsRaycasts )
     nnodes = len( nodes )
+
+    if mean is not None:
+        arr = np.load( mean )
+        mean = arr[0]
+        std = arr[1]
+        meanTGT = arr[2]
+        stdTGT = arr[3]
+        print( "Using mean and std:")
+        print( mean )
+        print( std )
+        print( "Using mean and std for target:" )
+        print( meanTGT )
+        print( stdTGT )
+
     # Load tracks and raycasts in
     x_data_train = []
     y_data_train = []
     x_data_val = []
     y_data_val = []
+    totaldataset = []
+    targetdataset = []
     for i in range( len( pathsTracksets ) ):
         if pathsTracksets[i] == "data/sleap_1_same3.h5":
             tracks = extract_coordinates( pathsTracksets[i], nodes, [x for x in range(nfish)] )[130:]
@@ -150,6 +166,10 @@ def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_L
             ftarget[:-1] = fnLoc
             ftarget[-1] = fnLoc[-1]
 
+            if mean is not None:
+                fdataset = np.nan_to_num( ( fdataset - mean ) / std )
+                # ftarget = np.nan_to_num( ( ftarget - meanTGT ) / stdTGT )
+
             x_train, y_train = multivariate_data( fdataset, ftarget, 0, splitindex, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
             x_data_train.append( x_train )
             y_data_train.append( y_train )
@@ -157,6 +177,31 @@ def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_L
             x_val, y_val = multivariate_data( fdataset, ftarget, splitindex, None, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
             x_data_val.append( x_val )
             y_data_val.append( y_val )
+
+            if getmean:
+                totaldataset.append( np.array( fdataset[:splitindex] ) ) # for mean and std calculation
+                targetdataset.append( np.array( ftarget[:splitindex] ) )
+
+    if getmean:
+        totaldataset = np.concatenate( totaldataset, axis=0 )
+        mean = totaldataset.mean( axis=0 )
+        std = totaldataset.std( axis=0 )
+
+        print( "mean   :" )
+        print( mean )
+        print( "std    :" )
+        print( std )
+
+        targetdataset = np.concatenate( targetdataset, axis=0 )
+        meanTGT = targetdataset.mean( axis=0 )
+        stdTGT = targetdataset.std( axis=0 )
+
+        print( "mean   :" )
+        print( meanTGT )
+        print( "std    :" )
+        print( stdTGT )
+
+        np.save( pathToSave, np.array( [mean, std, meanTGT, stdTGT] ) )
 
     x_data_train = np.concatenate( x_data_train, axis=0 )
     y_data_train = np.concatenate( y_data_train, axis=0 )
@@ -166,26 +211,28 @@ def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_L
     return x_data_train, y_data_train, x_data_val, y_data_val
 
 
-def simulate( model, nnodes, nfish, startpositions, startlocs, timesteps, N_VIEWS, D_LOC, N_WRAYS, FOV_WALLS, MAX_VIEW_RANGE, startinput ):
+def simulate( model, nnodes, nfish, startinput, startpos, startloc, timesteps, N_VIEWS, D_LOC, N_WRAYS, FOV_WALLS, MAX_VIEW_RANGE, mean ):
     """
     returns positions of nodes, then polar position of center, then nLoc of predictions
     """
-    assert len( startpositions ) == nnodes * 2 * nfish
-    assert len( startlocs ) == D_LOC * nfish
+    assert len( startpos ) == nnodes * 2 * nfish
+    assert startinput.shape[-1] == D_LOC + N_VIEWS + N_WRAYS
     assert nnodes >= 2
     nLoc = np.empty( ( timesteps, (nnodes * 2 + 1) * nfish ) )
     pos = np.empty( ( timesteps + 1, nnodes * 2 * nfish ) ) # saves x, y val for every node
     posCenterPolar = np.empty( (timesteps + 1, 3 * nfish ) ) # saves c_x, c_y, orienation
-    # Initiliaze first row
-    pos[0] = startpositions
+    # Initialize first row
+    modelinput = startinput
+    pos[0] = startpos
     for f in range(nfish):
-        posCenterPolar[0, 3 * f] = startpositions[nnodes * 2 * f + 2]
-        posCenterPolar[0, 3 * f + 1] = startpositions[nnodes * 2 * f + 3]
+        posCenterPolar[0, 3 * f] = startpos[nnodes * 2 * f + 2]
+        posCenterPolar[0, 3 * f + 1] = startpos[nnodes * 2 * f + 3]
         # Angle between Fish Orientation and the unit vector
         # Head - Center
-        x = ( startpositions[nnodes * 2 * f] - startpositions[nnodes * 2 * f + 2] )
-        y = ( startpositions[nnodes * 2 * f + 1] - startpositions[nnodes * 2 * f + 3] )
+        x = ( startpos[nnodes * 2 * f] - startpos[nnodes * 2 * f + 2] )
+        y = ( startpos[nnodes * 2 * f + 1] - startpos[nnodes * 2 * f + 3] )
         posCenterPolar[0, 3 * f + 2] = getAngle( ( 1, 0 ), ( x, y ), "radians" )
+
     # MARCS RAYCAST OBJECT
     walllines = defineLines( getRedPoints(path = "data/final_redpoint_wall.jpg") )
     unnecessary = 10
@@ -220,13 +267,17 @@ def simulate( model, nnodes, nfish, startpositions, startlocs, timesteps, N_VIEW
             # nLoc
             loc_ind = [f * D_LOC + x for x in range(D_LOC)]
             if t == 0:
-                inp[-D_LOC:] = np.array( startlocs )[loc_ind]
+                inp[-D_LOC:] = np.array( startloc )[loc_ind]
             else:
                 inp[-D_LOC:] = nLoc[t - 1, loc_ind]
 
             # 2. Prediction
-            # prediction = model.predict( inp )
-            prediction = model[t,loc_ind]
+            # Shift all observations
+            modelinput[:-1] = modelinput[1:]
+            # Insert newest
+            modelinput[-1] = inp
+            prediction = model.predict( np.array( [modelinput] ) )
+            # prediction = model[t,loc_ind] # to test correcness of simulation insert a loc file as model
             nLoc[t, loc_ind] = prediction
 
             # 3. New positions
@@ -239,7 +290,7 @@ def simulate( model, nnodes, nfish, startpositions, startlocs, timesteps, N_VIEW
             # 3.2 all the other positions
             pred_ind_otherNodes = [ 3 + x for x in range( (nnodes - 1 ) * 2 ) ]
             pos[t + 1, pos_ind_center] = posCenterPolar[t + 1,[f * 3, f * 3 + 1]]
-            output = row_l2c_additional_nodes( posCenterPolar[t + 1,pos_ind_xyOri], prediction[pred_ind_otherNodes] )
+            output = row_l2c_additional_nodes( posCenterPolar[t + 1,pos_ind_xyOri], prediction[0][pred_ind_otherNodes] )
 
             pos[t + 1, pos_ind_head] = output[0:2]
             pos_ind_otherNodes = [nnodes * 2 * f + 4 + x for x in range( ( nnodes - 2 ) * 2 )]
@@ -279,12 +330,14 @@ def saveModel( path, model ):
     return model.save( path )
 
 
-def loadStartData( path, pathRaycast, nodes, nfish, HIST_SIZE, notrandom=None ):
+def loadStartData( path, pathRaycast, nodes, nfish, HIST_SIZE,TARGET_SIZE, N_WRAYS, D_DATA, N_VIEWS, D_LOC, MEAN, notrandom=None ):
     """
     Loads random startpoint from path diffset
     """
+    nnodes = len( nodes )
     x_data_train = []
-    tracks = extraxt_coordinated( path, nodesm [x for x in range(nfish)] )
+    tracks = extract_coordinates( path, nodes, [x for x in range(nfish)] )
+    nLoc = getnLoc( tracks, nnodes=nnodes, nfish=nfish )
     wRays = stealWallRays( pathRaycast, COUNT_RAYS_WALLS=N_WRAYS, nfish=nfish )
     for f in range( nfish ):
         fdataset = np.empty( ( tracks.shape[0], D_DATA ) )
@@ -309,15 +362,19 @@ def loadStartData( path, pathRaycast, nodes, nfish, HIST_SIZE, notrandom=None ):
         ftarget[:-1] = fnLoc
         ftarget[-1] = fnLoc[-1]
 
-        x_train, y_train = multivariate_data( fdataset, ftarget, 0, splitindex, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
+        if mean is not None:
+            fdataset = np.nan_to_num( ( fdataset - mean ) / std )
+            ftarget = np.nan_to_num( ( ftarget - meanTGT ) / stdTGT )
+
+        x_train, y_train = multivariate_data( fdataset, ftarget, 0, None, HIST_SIZE, TARGET_SIZE, 1, single_step=True )
         x_data_train.append( x_train )
 
     x_data_train = np.concatenate( x_data_train, axis=0 )
     if notrandom is None:
         thatoneisit = np.random.randint( 0,x_data_train.shape[-1] )
-        return x_data_train[thatoneisit]
+        return x_data_train[thatoneisit], tracks[thatoneisit * HIST_SIZE], nLoc[thatoneisit * HIST_SIZE]
 
-    return x_data_train[notrandom]
+    return x_data_train[notrandom], tracks[notrandom * HIST_SIZE], nLoc[notrandom * HIST_SIZE]
 
 
 def main():
@@ -325,10 +382,10 @@ def main():
     """
     # Parameters
     SPLIT = 0.9
-    BATCH_SIZE = 12
+    BATCH_SIZE = 10
     BUFFER_SIZE= 10000
-    EPOCHS = 100
-    HIST_SIZE = 120 # frames to be looked on or SEQ_LEN
+    EPOCHS = 20
+    HIST_SIZE = 70 # frames to be looked on or SEQ_LEN
     TARGET_SIZE = 0
     N_NODES = 4
     N_FISH = 3
@@ -337,14 +394,17 @@ def main():
     D_LOC = N_NODES * 2 + 1
     D_DATA = N_VIEWS + N_WRAYS + D_LOC
     D_OUT = D_LOC
-    U_LSTM = D_DATA
-    U_DENSE = D_DATA // 2
+    U_LSTM = 128
+    U_DENSE = 64
     U_OUT = D_LOC
     FOV_WALLS = 180
     MAX_VIEW_RANGE = 709
+    STARTSEQ = 0
+    SIM_STEPS = 3000
+    MEAN = "data/mean_same1234_node4.npy"
     NAME = "4model_v8"
     NAME = NAME + "_" + str( U_LSTM ) + "_" + str( U_DENSE ) + "_" + str( U_OUT ) + "_" + str( BATCH_SIZE ) + "_" + str( HIST_SIZE )
-    LOAD = "4model_v7_40_20_9_10_100"
+    LOAD = "4model_v6_40_20_9_10_70"
 
     tf.random.set_seed(13)
 
@@ -357,11 +417,14 @@ def main():
     same4rays = "data/raycast_data_same4.csv"
     same5rays = "data/raycast_data_same5.csv"
 
-    if False:
-        pathsTracksets = [same1,same3]
-        pathsRaycasts = [same1rays,same3rays]
+    diff1 = "data/sleap_1_diff1.h5"
+    diff1rays = "data/raycast_data_diff1.csv"
 
-        x_train, y_train, x_val, y_val = loadData( pathsTracksets, pathsRaycasts, nodes=[b'head', b'center', b'tail_basis', b'tail_end'], nfish=3, N_WRAYS=N_WRAYS, N_VIEWS=N_VIEWS, D_LOC=D_LOC, D_DATA=D_DATA, D_OUT=D_OUT, SPLIT=SPLIT, HIST_SIZE=HIST_SIZE, TARGET_SIZE=TARGET_SIZE )
+    if False:
+        pathsTracksets = [same1,same3,same4,same5]
+        pathsRaycasts = [same1rays,same3rays,same4rays,same5rays]
+
+        x_train, y_train, x_val, y_val = loadData( pathsTracksets, pathsRaycasts, nodes=[b'head', b'center', b'tail_basis', b'tail_end'], nfish=3, N_WRAYS=N_WRAYS, N_VIEWS=N_VIEWS, D_LOC=D_LOC, D_DATA=D_DATA, D_OUT=D_OUT, SPLIT=SPLIT, HIST_SIZE=HIST_SIZE, TARGET_SIZE=TARGET_SIZE, mean=MEAN )
         print( "x_train: {}".format( x_train.shape ) )
         print( "y_train: {}".format( y_train.shape ) )
         print( "x_val  : {}".format( x_val.shape ) )
@@ -370,7 +433,6 @@ def main():
         traindata, valdata = getDatasets( x_train, y_train, x_val, y_val, BATCH_SIZE=BATCH_SIZE, BUFFER_SIZE=BUFFER_SIZE )
 
         nmodel = createModel( NAME, U_LSTM, U_DENSE, U_OUT, x_train.shape[-2:], dropout=[0.3,0.3] )
-        saveModel( NAME, nmodel )
 
         EVAL_INTERVAL = ( x_train.shape[0] ) // BATCH_SIZE
         VAL_INTERVAL = ( x_val.shape[0] ) // BATCH_SIZE
@@ -380,14 +442,31 @@ def main():
         saveModel( NAME, nmodel )
         plot_train_history( history, NAME )
     else:
-        nmodel = tf.keras.models.load_model( LOAD )
-        startpositions = [635.82489014, 218.66400146, 614.24102783, 213.71218872, 569.61773682, 211.43319702, 563.06671143, 211.47904968, 556.49041748, 271.07836914, 539.67126465, 285.99697876, 511.53341675, 321.82028198, 509.9105835, 328.56533813, 640.18927002, 429.0065918, 633.73266602, 404.88540649, 624.15777588, 356.77297974, 625.47979736, 348.31661987]
-        startlocomotions = [2.20557576e+00, 3.83888240e-02, 2.31128226e-02, 2.08867611e+01, 0.00000000e+00, 4.20416095e+01, 3.10272032e+00, 4.83654902e+01, 3.15323521e+00, 7.04496149e-01, 2.87749306e+00, 6.21921276e+00, 2.36665253e+01, 0.00000000e+00, 4.68934161e+01, 3.36459434e+00, 5.37909806e+01, 3.37998034e+00, 2.58289250e-01, 2.93359127e+00, 6.79543903e-03, 2.31268859e+01, 0.00000000e+00, 5.24138135e+01, 2.97845064e+00, 5.97015506e+01, 2.98801713e+00]
+        # nmodel = tf.keras.models.load_model( LOAD )
         # tracks = extract_coordinates( same1, [b'head', b'center', b'tail_basis', b'tail_end'] )
-        #nLoc = getnLoc( tracks, 4, 3 )
+        # nLoc = getnLoc( tracks, 4, 3 )
         # print( getnLoc( tracks, nnodes=N_NODES, nfish=N_FISH )[100] )
+        pathsTracksets = [same1]
+        pathsRaycasts = [same1rays]
 
-        pos, posC, nLocs = simulate( nmodel, N_NODES, N_FISH, startpositions, startlocomotions, 3000, N_VIEWS=N_VIEWS, N_WRAYS=N_WRAYS, D_LOC=D_LOC, FOV_WALLS=FOV_WALLS, MAX_VIEW_RANGE=MAX_VIEW_RANGE )
+        x_train, y_train, x_val, y_val = loadData( pathsTracksets, pathsRaycasts, nodes=[b'head', b'center', b'tail_basis', b'tail_end'], nfish=3, N_WRAYS=N_WRAYS, N_VIEWS=N_VIEWS, D_LOC=D_LOC, D_DATA=D_DATA, D_OUT=D_OUT, SPLIT=SPLIT, HIST_SIZE=HIST_SIZE, TARGET_SIZE=TARGET_SIZE, pathToSave=MEAN, getmean=True )
+        print( "x_train: {}".format( x_train.shape ) )
+        print( "y_train: {}".format( y_train.shape ) )
+        print( "x_val  : {}".format( x_val.shape ) )
+        print( "y_val  : {}".format( y_val.shape ) )
+
+        traindata, valdata = getDatasets( x_train, y_train, x_val, y_val, BATCH_SIZE=BATCH_SIZE, BUFFER_SIZE=BUFFER_SIZE )
+        # for x, y in traindata.take(1):
+        #     predictun = nmodel.predict( x )
+        #     print( "target" )
+        #     print( y[0] )
+
+        # print( "prediction" )
+        # print( predictun[0] )
+
+        startinput, startpos, startloc = loadStartData( diff1, diff1rays, [b'head', b'center', b'tail_basis', b'tail_end'], 3, notrandom=STARTSEQ, HIST_SIZE=HIST_SIZE, TARGET_SIZE=TARGET_SIZE, N_WRAYS=N_WRAYS, D_DATA=D_DATA, N_VIEWS=N_VIEWS, D_LOC=D_LOC, MEAN=MEAN )
+
+        pos, posC, nLocs = simulate( model=nmodel, nnodes=N_NODES, nfish=N_FISH, startinput=startinput, startpos=startpos, startloc=startloc, timesteps=SIM_STEPS, N_VIEWS=N_VIEWS, N_WRAYS=N_WRAYS, D_LOC=D_LOC, FOV_WALLS=FOV_WALLS, MAX_VIEW_RANGE=MAX_VIEW_RANGE, mean=MEAN )
 
         df = pd.DataFrame( data = pos )
         df.to_csv( LOAD + "tracks.csv", sep = ";" )
