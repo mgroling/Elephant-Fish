@@ -195,8 +195,9 @@ def getnLoc( tracks, nnodes, nfish=3 ):
         Amount of nodes per fish, n >= 2
     output:
         [
-            [ori]
+            [f1_lin, f1_ang, f1_ori, f1_1_dis, d1_1_ori, f1_2_dis, f1_2_ori, ..., f2_lin, f2_ang, f2_ori, ... ]
         ]
+    outputshape: (length, (nnodes * 2 + 1) * nfish)
     """
     rows, cols = tracks.shape
     assert cols >= 4 * nfish

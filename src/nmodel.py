@@ -123,7 +123,20 @@ def getData( TRAINSPLIT ):
     return np.nan_to_num( data ) , np.nan_to_num( target ), data_mean[-f1Loc:], data_std[-f1Loc:]
 
 
-def main():
+def simulate( model, nnodes, nfish, startpositions, timesteps ):
+    """
+    returns nLoc array with simulation predicitons
+    """
+    nLoc = np.empty( (timesteps, (nnodes * 2 + 1) * nfish ) )
+    pos = np.empty( (timesteps + 1, nnodes * 2 * nfish ) )
+    pos[0] = startpositions
+    # main loop
+    for t in range( timesteps ):
+        pass
+
+    return nLoc
+
+def train():
     TRAINSPLIT = 15000
     BATCH_SIZE = 10
     BUFFER_SIZE= 10000
@@ -189,6 +202,11 @@ def main():
 
     nmodel.save( "models/" )
     plot_train_history( history, "4model_normalized_v0" )
+
+
+def main():
+    pass
+
 
 if __name__ == "__main__":
     main()
