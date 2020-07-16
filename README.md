@@ -145,3 +145,43 @@ If only given center and head values, you can use
 @TODO
 ```
 to add static positions for the fish.
+
+# n Node Model
+
+n stands for the amount of nodes
+
+## The nloc model
+
+Datastructure to represent movement. n stands for the amount of nodes per fish
+* The first three arguments provide the change from the old center point to the new one
+* From that point the base fish model will be computed on
+* The rest (n - 1) * 2 arguments are the distance and orientation to the center node
+
+This is how an nloc array looks:
+```
+[
+    [f1_lin, f1_ang, f1_ori, f1_1_dis, d1_1_ori, f1_2_dis, f1_2_ori, ..., f2_lin, f2_ang, f2_ori, ... ]
+    ...
+]
+```
+
+## The nView
+
+Datastructure to represent the view of a fish. A fish in the n Node Model views n nodes for every other fish. This is possible since we are only using 3 fishes constantly.
+The nView vector saves the distances and angles from the center of the fish to the n nodes of every other fish.
+
+This is how an nView array looks like for fish1:
+```
+[
+    [f2_n1_dis, f2_n1_ang, f2_n2_dis, f2_n2_ang, ..., f3_n1_dis, f3_n1_ang, ...]
+]
+```
+
+## Input
+
+The fish gets as input:
+* Wall rays
+* nView
+* nLoc from previos timestep
+The fish gives as output:
+* The nloc for that timestep
