@@ -214,6 +214,7 @@ def loadData( pathsTracksets, pathsRaycasts, nodes, nfish, N_WRAYS, N_VIEWS, D_L
 def simulate( model, nnodes, nfish, startinput, startpos, startloc, timesteps, N_VIEWS, D_LOC, N_WRAYS, FOV_WALLS, MAX_VIEW_RANGE, mean ):
     """
     returns positions of nodes, then polar position of center, then nLoc of predictions
+    startpos and startloc are not standardized
     """
     assert len( startpos ) == nnodes * 2 * nfish
     assert startinput.shape[-1] == D_LOC + N_VIEWS + N_WRAYS
@@ -285,12 +286,20 @@ def simulate( model, nnodes, nfish, startinput, startpos, startloc, timesteps, N
             else:
                 inp[-D_LOC:] = nLoc[t - 1, loc_ind]
 
+            if mean is not None:
+                inp = np.nan_to_num( ( inp - meanv ) / std )
+
             # 2. Prediction
             # Shift all observations
             modelinput[:-1] = modelinput[1:]
             # Insert newest
             modelinput[-1] = inp
             prediction = model.predict( np.array( [modelinput] ) )
+
+            if mean is not None:
+                # shift prediction back
+                prediction = prediction * stdTGT + meanTGT
+
             # prediction = model[t,loc_ind] # to test correcness of simulation insert a loc file as model
             nLoc[t, loc_ind] = prediction
 
@@ -413,7 +422,7 @@ def main():
     SPLIT = 0.9
     BATCH_SIZE = 10
     BUFFER_SIZE= 10000
-    EPOCHS = 200
+    EPOCHS = 50
     HIST_SIZE = 70 # frames to be looked on or SEQ_LEN
     TARGET_SIZE = 0
     N_NODES = 4
