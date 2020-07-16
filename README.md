@@ -171,12 +171,12 @@ The output is the locomotion for the following step.
 
 ## Network structure
 
-We tried different network structures, but they all looked similar:
-LSTM-layer with 40-128 nodes
-Dropout-layer with a Dropout of 0.1-0.3
-Dense-layer with 20-64 nodes
-Dropout-layer with a Dropout of 0.1-0.3
-Dense-layer with as many nodes as the output is big (3 for non-bin-approach)
+We tried different network structures, but they all looked similar:\
+LSTM-layer with 40-128 nodes\
+Dropout-layer with a Dropout of 0.1-0.3\
+Dense-layer with 20-64 nodes\
+Dropout-layer with a Dropout of 0.1-0.3\
+Dense-layer with as many nodes as the output is big (3 for non-bin-approach)\
 
 # n Node Model
 
