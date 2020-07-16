@@ -219,7 +219,7 @@ def simulate( model, nnodes, nfish, startinput, startpos, startloc, timesteps, N
     assert startinput.shape[-1] == D_LOC + N_VIEWS + N_WRAYS
     assert nnodes >= 2
 
-   if mean is not None:
+    if mean is not None:
         arr = np.load( mean, allow_pickle=True )
         meanv = arr[0]
         std = arr[1]
@@ -413,7 +413,7 @@ def main():
     SPLIT = 0.9
     BATCH_SIZE = 10
     BUFFER_SIZE= 10000
-    EPOCHS = 20
+    EPOCHS = 200
     HIST_SIZE = 70 # frames to be looked on or SEQ_LEN
     TARGET_SIZE = 0
     N_NODES = 4
@@ -431,7 +431,7 @@ def main():
     STARTSEQ = 0
     SIM_STEPS = 3000
     MEAN = "data/mean_same1234_node4.npy"
-    NAME = "4model_v8"
+    NAME = "4model_v9"
     NAME = NAME + "_" + str( U_LSTM ) + "_" + str( U_DENSE ) + "_" + str( U_OUT ) + "_" + str( BATCH_SIZE ) + "_" + str( HIST_SIZE )
     LOAD = "4model_v6_40_20_9_10_70"
 
@@ -449,7 +449,7 @@ def main():
     diff1 = "data/sleap_1_diff1.h5"
     diff1rays = "data/raycast_data_diff1.csv"
 
-    if False:
+    if True:
         pathsTracksets = [same1,same3,same4,same5]
         pathsRaycasts = [same1rays,same3rays,same4rays,same5rays]
 
