@@ -18,6 +18,9 @@ import shap
 
 class Simulation:
     def __init__(self, count_bins_agents, count_rays_walls, radius_fov_walls, radius_fov_agents, max_view_range, count_fishes, cluster_path, verbose = 1):
+        """
+        self._cluster does not work properly right now, dont use!!!!
+        """
         self._count_bins = count_bins_agents
         self._count_rays = count_rays_walls
         self._fov_walls = radius_fov_walls
@@ -34,6 +37,9 @@ class Simulation:
         self._wall_lines = defineLines(getRedPoints(path = "data/final_redpoint_wall.jpg"))
         self._tracks = []
         self.verbose = verbose
+        self._mean = []
+        self._std = []
+        self._start_simulation = []
 
     def setModel(self, model):
         self._model = model
@@ -67,19 +73,20 @@ class Simulation:
 
             loc_size = 3
 
-            for j in range(0, len(self._count_agents)):
+            for j in range(0, self._count_agents):
                 loc = locomotion[:, j*loc_size : (j+1)*loc_size]
                 wall_rays = raycasts[:, j*self._count_bins : (j+1)*self._count_bins]
                 agent_rays = raycasts[:, self._count_agents*self._count_bins+j*self._count_rays : self._count_agents*self._count_bins+(j+1)*self._count_rays]
 
                 trajectory = np.append(np.append(loc, wall_rays, axis = 1), agent_rays, axis = 1)
 
-                TRAIN_SPLIT = int(0.8*len(trajectory))
+                TRAIN_SPLIT = int(0.9*len(trajectory))
 
                 #standardize datset
-                subtrack_mean = trajectory[:TRAIN_SPLIT].mean(axis = 0)
-                subtrack_std = trajectory[:TRAIN_SPLIT].std(axis = 0)
-                trajectory = (trajectory - subtrack_mean) / subtrack_std
+                if i == 0 and j == 0:
+                    self._mean = trajectory[:TRAIN_SPLIT].mean(axis = 0)
+                    self._std = trajectory[:TRAIN_SPLIT].std(axis = 0)
+                trajectory = (trajectory - self._mean) / self._std
 
                 #create sequences
                 x_train, y_train = multivariate_data(trajectory, trajectory[:, 0:3], 0, TRAIN_SPLIT, sequence_length, 1, 1, single_step = True)
@@ -89,9 +96,12 @@ class Simulation:
                     x_train_data_all, y_train_data_all = x_train, y_train
                     x_val_data_all, y_val_data_all = x_val, y_val
                 else:
-                    print("should be (n, seq_length, 39):", x_train.shape)
-                    x_train_data_all = np.append(x_train_data_all, x_train, axis = 0), np.append(y_train_data_all, y_train, axis = 0)
-                    x_val_data_all = np.append(x_val_data_all, x_val, axis = 0), np.append(y_val_data_all, y_val, axis = 0)
+                    x_train_data_all, y_train_data_all = np.append(x_train_data_all, x_train, axis = 0), np.append(y_train_data_all, y_train, axis = 0)
+                    x_val_data_all, y_val_data_all = np.append(x_val_data_all, x_val, axis = 0), np.append(y_val_data_all, y_val, axis = 0)
+
+        for i in range(0, 100):
+            rand = random.randrange(0, x_train_data_all.shape[0]-1)
+            self._start_simulation.append(x_train_data_all[rand:rand+1])
 
         train_data = tf.data.Dataset.from_tensor_slices((x_train_data_all, y_train_data_all))
         train_data = train_data.cache().shuffle(10000).batch(batch_size).repeat()
@@ -100,10 +110,10 @@ class Simulation:
         val_data = val_data.batch(batch_size).repeat()
 
         if self.verbose >= 2:
-            history = self._model.fit(train_data, epochs = epochs, steps_per_epoch = len(train_data) // batch_size, validation_data = val_data, validation_steps = 50, verbose = 1)
+            history = self._model.fit(train_data, epochs = epochs, steps_per_epoch = len(x_train_data_all) // batch_size, validation_data = val_data, validation_steps = 50, verbose = 1)
             plot_train_history(history, "Training and validation loss")
         else:
-            history = self._model.fit(train_data, epochs = epochs, steps_per_epoch = len(train_data) // batch_size, validation_data = val_data, validation_steps = 50, verbose = 0)
+            history = self._model.fit(train_data, epochs = epochs, steps_per_epoch = len(x_train_data_all) // batch_size, validation_data = val_data, validation_steps = 50, verbose = 0)
             plot_train_history(history, "Training and validation loss")
             
 
@@ -167,10 +177,11 @@ class Simulation:
             else:
                 self._model.fit(train_data, epochs = epochs, steps_per_epoch = len(x_train) // batch_size, validation_data = val_data, validation_steps = 50, verbose = 0)
 
-    def testNetwork(self, timesteps = 10, save_tracks = None, start = "random", seed = None):
+    def testNetwork(self, timesteps = 10, save_tracks = None, save_start = None, start = "random", seed = None):
         """
         creates a Simulation for the network and created locomotions for timesteps times
         the starting position of each fish is random (if start = "random")
+        self._cluster does not work properly right now, dont use!!!!
         """
         out_of_tank = 0
         random.seed(a = seed)
@@ -182,6 +193,7 @@ class Simulation:
         locomotion = [[] for i in range(0, self._count_agents)]
         raycast_object = Raycast(self._wall_lines, self._count_bins, self._count_rays, self._fov_agents, self._fov_walls, self._view, self._count_agents)
         if start == "random":
+            start_indices = None
             start_indices = random.sample(range(len(self._start_simulation)), 3)
             for i in range(0, self._count_agents):
                 #(250 700) for x (125, 550) for y are good boundaries for coordiantes within the tank
@@ -189,6 +201,7 @@ class Simulation:
                 #cur_pos right now is x_head, y_head, length angle from look_vector to pos_x_axis
                 cur_pos.append([x_center, y_center, length, angle_rad])
                 cur_X[i] = self._start_simulation[start_indices[i]]
+               
 
         first_pos = [[cur_pos[i][j] for j in range(0, len(cur_pos[i]))] for i in range(0, len(cur_pos))]
 
@@ -199,10 +212,13 @@ class Simulation:
 
             #get next step
             for j in range(0, self._count_agents):
-                pred = self._model.predict(cur_X[j])
+                pred = self._model.predict((cur_X[j]-self._mean) / self._std)
+                #revert standardization
+                pred = pred * self._mean[0:3].reshape(1, 3) + self._std[0:3].reshape(1, 3)
                 pred_mov, pred_pos, pred_ori = None, None, None
 
                 if self._cluster:
+                    #todo
                     #collect prediction for each bin and create percentages out of them
                     pred_mov_bins = softmax(pred[:, : self._clusters_counts[0]])
                     pred_pos_bins = softmax(pred[:, self._clusters_counts[0] : self._clusters_counts[0]+self._clusters_counts[1]])
@@ -215,16 +231,16 @@ class Simulation:
 
                     #translate index of bin into actual locomotion values
                     pred_mov = self._clusters_mov[pred_mov_bins_index]
-                    pred_pos = self._clusters_pos[pred_pos_bins_index]
-                    pred_ori = self._clusters_ori[pred_ori_bins_index]
+                    pred_pos = self._clusters_pos[pred_pos_bins_index]%(2*np.pi)
+                    pred_ori = self._clusters_ori[pred_ori_bins_index]%(2*np.pi)
                 else:
-                    pred_mov, pred_pos, pred_ori = float(pred[:, 0]), float(pred[:, 1]), float(pred[:, 2])
-                
+                    #convert angles back to 0,2pi (not sure if it would work correctly with -pi,pi) for ori and inverse convertAngle for pos angle
+                    pred_mov, pred_pos, pred_ori = float(pred[:, 0]), float(pred[:, 1]), float(pred[:, 2])%(2*np.pi)
+                    pred_mov, pred_pos = convertAngleBack(pred_mov, pred_pos)
 
-                #chage movement to be always positive (in locomotion)
-                angle_pos = (cur_pos[j][3] + pred_pos) - 2*math.pi if (cur_pos[j][3] + pred_pos) > 2*math.pi else (cur_pos[j][3] + pred_pos)
+                angle_pos = (cur_pos[j][3] + pred_pos) % (2*math.pi)
                 movement_vector = (abs(pred_mov)*math.cos(angle_pos), abs(pred_mov)*math.sin(angle_pos))
-                angle_ori = (cur_pos[j][3] + pred_ori) - 2*math.pi if (cur_pos[j][3] + pred_ori) > 2*math.pi else (cur_pos[j][3] + pred_ori)
+                angle_ori = cur_pos[j][3] % (2*math.pi)
 
                 temp_x = cur_pos[j][0]
                 temp_y = cur_pos[j][1]
@@ -248,16 +264,24 @@ class Simulation:
                     cur_pos[j][1] = temp_y + movement_vector[1]
                     cur_pos[j][3] = angle_ori
 
+                    #convert angles back
+                    temp_ori = pred_ori % (2*np.pi)
+                    pred_mov, temp_pos = convertAngle(pred_mov, pred_pos)
+
                     if self._cluster:
                         locomotion[j] = loco_bin
                     else:
-                        locomotion[j] = np.array([[pred_mov, pred_pos, pred_ori]])
+                        locomotion[j] = np.array([[pred_mov, temp_pos, temp_ori]])
                 else:
+                    #convert angles from back
+                    temp_ori = pred_ori % (2*np.pi)
+                    pred_mov, temp_pos = convertAngle(pred_mov, pred_pos)
+
                     #save old locomotion for next iterations network input
                     if self._cluster:
                         locomotion[j] = np.append(np.append(pred_mov_bins, pred_pos_bins, axis = 1), pred_ori_bins, axis = 1)
                     else:
-                        locomotion[j] = np.array([[pred_mov, pred_pos, pred_ori]])
+                        locomotion[j] = np.array([[pred_mov, temp_pos, temp_ori]])
 
                 #save locomotion for output
                 if j == 0:
@@ -290,8 +314,8 @@ class Simulation:
         df = pd.DataFrame(data = tracks, columns = tracks_header[0])
 
         if save_tracks != None:
-            df.to_csv(save_tracks + "locomotion_simulation.csv", sep = ";")
-            with open(save_tracks + "startposition_simulation.txt", "w+") as f:
+            df.to_csv(save_tracks, sep = ";")
+            with open(save_start, "w+") as f:
                 for elem in first_pos:
                     f.write("%s\n" % elem)
         else:
@@ -330,7 +354,8 @@ class Simulation:
         ori = cur_pos[3]
 
         #convert it to bin representation
-        loco = np.array([[mov, pos, ori]])
+        #todo
+        loco = np.array([[mov, pos, ori - 2*np.pi if ori > np.pi else ori]])
         loco_bin = convertLocmotionToBin(loco, "data/clusters.txt")
 
         return mov, pos, ori, loco_bin
@@ -347,38 +372,39 @@ def main():
     CLUSTER_COUNTS = (18, 17, 26)
 
     SEQUENCE_LENGTH = 70
-    BATCH_SIZE = 20
+    BATCH_SIZE = 10
     SUBTRACK_LENGTH = 6100
-    EPOCHS = 1
+    EPOCHS = 30
 
-    locomotion_paths = ["data/locomotion_data_same1.csv", "data/locomotion_data_same3.csv", "data/locomotion_data_same4.csv", "data/locomotion_data_same5.csv"]
-    raycast_paths = ["data/raycast_data_same1.csv", "data/raycast_data_same3.csv", "data/raycast_data_same4.csv", "data/raycast_data_same5.csv"]
-
-    #40
-    #20
+    locomotion_paths = ["data/locomotion_data_same1.csv", "data/locomotion_data_same3.csv", "data/locomotion_data_same4.csv", "data/locomotion_data_same5.csv",
+                        "data/locomotion_data_diff1.csv", "data/locomotion_data_diff2.csv", "data/locomotion_data_diff3.csv", "data/locomotion_data_diff4.csv"]
+    raycast_paths = ["data/raycast_data_same1.csv", "data/raycast_data_same3.csv", "data/raycast_data_same4.csv", "data/raycast_data_same5.csv",
+                    "data/raycast_data_diff1.csv", "data/raycast_data_diff2.csv", "data/raycast_data_diff3.csv", "data/raycast_data_diff4.csv"]
 
     model = Sequential()
-    model.add(LSTM(40, input_shape = (SEQUENCE_LENGTH, COUNT_BINS_AGENTS+COUNT_RAYS_WALLS+3)))
+    model.add(LSTM(64, input_shape = (SEQUENCE_LENGTH, COUNT_BINS_AGENTS+COUNT_RAYS_WALLS+3)))
     model.add(Dropout(0.3))
-    model.add(Dense(20))
+    model.add(Dense(32))
     model.add(Dropout(0.3))
     model.add(Dense(3))
     model.compile(optimizer = RMSprop(), loss = "mse")
 
-    # model = load_model("models/model_LSTM64_DROPOUT02_DENSE3_70_20_6100_1")
+    #model = load_model("models/2model_v0_LSTM40_DROP03_DENSE20_DROP03_10_70_10_same13")
 
     sim = Simulation(COUNT_BINS_AGENTS, COUNT_RAYS_WALLS, RADIUS_FIELD_OF_VIEW_WALLS, RADIUS_FIELD_OF_VIEW_AGENTS, MAX_VIEW_RANGE, COUNT_FISHES, None, verbose = 2)
     sim.setModel(model)
-    sim.trainNetworkOnce(locomotion_paths[0:2], raycast_paths[0:2], BATCH_SIZE, SEQUENCE_LENGTH, EPOCHS)
+    sim.trainNetworkOnce(locomotion_paths[0:4], raycast_paths[0:4], BATCH_SIZE, SEQUENCE_LENGTH, EPOCHS)
     # sim.trainNetwork("data/locomotion_data_same1.csv", "data/raycast_data_same1.csv", SUBTRACK_LENGTH, BATCH_SIZE, SEQUENCE_LENGTH, EPOCHS)
     # sim.trainNetwork("data/locomotion_data_same3.csv", "data/raycast_data_same3.csv", SUBTRACK_LENGTH, BATCH_SIZE, SEQUENCE_LENGTH, EPOCHS)
     # sim.trainNetwork("data/locomotion_data_same4.csv", "data/raycast_data_same4.csv", SUBTRACK_LENGTH, BATCH_SIZE, SEQUENCE_LENGTH, EPOCHS)
-    # sim.trainNetwork("data/locomotion_data_same5.csv", "data/raycast_data_same5.csv", SUBTRACK_LENGTH, BATCH_SIZE, SEQUENCE_LENGTH, EPOCHS)
+    # sim.trainNetwork("data/locomotion_data_same5.csv", "data/raycast_data_same5.csv", SUBTRACK_LENGTH, BATCH_SIZE, SEQ UENCE_LENGTH, EPOCHS)
     model = sim.getModel()
 
-    model.save("models/model_LSTM_ALL")
+    #Naming of model files: 2model (only uses head and center) _ version _ layers (e.g. LSTM40, DROP03, DENSE20) _ batchSize _ sequenceLength _ Epochs _ data on which it is trained
 
-    sim.testNetwork(timesteps = 2000, save_tracks = "data/")
+    sim.testNetwork(timesteps = 18000, save_tracks = "data/new_2model_v0_LSTM64_DROP03_DENSE32_DROP03_10_70_30_same.csv", save_start = "data/new_2model_v0_LSTM64_DROP03_DENSE32_DROP03_10_70_30_same.txt")
+
+    model.save("models/new_2model_v0_LSTM64_DROP03_DENSE32_DROP03_10_70_30_same")
 
 if __name__ == "__main__":
     main()

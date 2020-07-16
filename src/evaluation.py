@@ -538,18 +538,17 @@ def animate_positions(track, track2 = None):
 
 
 def main():
-
     # create_all_plots_together()
     # create_all_plots_separate()
     # get locomotion
-    df = pd.read_csv("data/locomotion_simulation.csv", index_col=0, sep = ";")
+    df = pd.read_csv("data/2model_v0_LSTM128_DROP03_DENSE64_DROP03_10_70_50_same_tracks.csv", index_col=0, sep = ";")
     loc = df.to_numpy()
-    startpolar, distances = readStartposition( "data/startposition_simulation.txt" )
+    startpolar, distances = readStartposition( "data/2model_v0_LSTM128_DROP03_DENSE64_DROP03_10_70_50_same_startpos.txt" )
     polarTracks = np.array([startpolar])
     startpositions = convPolarToCart( polarTracks, distances )[0]
     tracks = locomotion.convLocToCart( loc, startpositions )
-    create_plots( tracks, path="figures/simulation" )
-    visualization.addTracksOnTank( "I:/Code/SWP/sim_tracks.avi", tracks, skeleton=[(0,1)], showvid=False )#"C:/Users/Gabriel/Videos/sim_tracks.avi"
+    create_plots( tracks, path="figures/2model_v0_LSTM128_DROP03_DENSE64_DROP03_10_70_50_same" )
+    visualization.addTracksOnTank( "I:/Code/SWP/2model_v0_LSTM128_DROP03_DENSE64_DROP03_10_70_50_same_tracks.avi", tracks, skeleton=[(0,1)], showvid=False )#"C:/Users/Gabriel/Videos/sim_tracks.avi"
 
 if __name__ == "__main__":
     main()

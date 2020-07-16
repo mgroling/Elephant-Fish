@@ -291,3 +291,26 @@ def multivariate_data(dataset, target, start_index, end_index, history_size, tar
       labels.append(target[i:i+target_size])
 
   return np.array(data), np.array(labels)
+
+def convertAngle(lin_mov, angle):
+    """
+    convert angle from 0,2pi to -1/2pi,1/2pi and change lin_mov accordingly
+    """
+    if angle > 3/2*np.pi:
+        angle = angle - 2*np.pi
+    elif angle > 1/2*np.pi:
+        angle = np.pi - angle
+        lin_mov 
+    
+    return lin_mov, angle
+
+def convertAngleBack(lin_mov, angle):
+    """
+    convert Angle back from -1/2pi,1/2pi to 0,2pi (inverse from convertAngle)
+    """
+    if lin_mov < 0:
+        angle = np.pi - angle
+        lin_mov = -lin_mov
+    angle = angle % (2*np.pi)
+
+    return lin_mov, angle
