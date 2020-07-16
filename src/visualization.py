@@ -147,9 +147,9 @@ def addTracksOnTank( outputvideo, tracks, tank="data/tank.png", nfish = 3, fps=3
 
 def main():
 
-    tracks = reader.extract_coordinates( "data/sleap_1_diff2.h5", [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'] )[0:17000]
+    tracks = reader.extract_coordinates( "data/sleap_1_diff1.h5", [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'] )
 
-    addTracksOnVideo( diff2, diff2_out, tracks, showvid=True, skeleton=[(0,1), (0,2), (0,3), (1,2), (1,3), (2,4), (3,5), (2,6), (3,7), (6,8), (7,8), (8,9)] )
+    addTracksOnVideo( diff1, diff1_out, tracks, skeleton=[(0,1), (0,2), (0,3), (1,2), (1,3), (2,4), (3,5), (2,6), (3,7), (6,8), (7,8), (8,9)] )
     # addTracksOnTank( diff2_out, tracks, showvid=True, skeleton=[(0,1), (0,2), (0,3), (1,2), (1,3), (2,4), (3,5), (2,6), (3,7), (6,8), (7,8), (8,9)] )
 
 if __name__ == "__main__":

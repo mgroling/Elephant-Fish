@@ -1,5 +1,6 @@
 # Python file for the nmodel
 import os
+import sys
 import numpy as np
 import pandas as pd
 import tensorflow as tf
@@ -37,6 +38,12 @@ def getnView( tracksFish, tracksOther, nfish=3 ):
             vec_cn = tracksOther[:,ixy] - center
             out[:,nnodes * 2 * f + 2 * n] = getDistances( tracksOther[:,ixy], center )
             out[:,nnodes * 2 * f + 2 * n + 1] = getAngles( vec_ch, vec_cn )
+            # new part
+            anglesToChange = np.where( out[:,nnodes * 2 * f + 2 * n + 1] > ( np.pi * 3 / 2 ) )
+            out[anglesToChange,nnodes * 2 * f + 2 * n + 1] = out[anglesToChange,nnodes * 2 * f + 2 * n + 1] - 2 * np.pi
+            anglesToChange = np.where( out[:,nnodes * 2 * f + 2 * n + 1] > ( np.pi / 2 ) )
+            out[anglesToChange,nnodes * 2 * f + 2 * n + 1] = np.pi - out[anglesToChange,nnodes * 2 * f + 2 * n + 1]
+            out[anglesToChange,nnodes * 2 * f + 2 * n] = - out[anglesToChange,nnodes * 2 * f + 2 * n]
 
     return out
 
@@ -422,7 +429,7 @@ def main():
     SPLIT = 0.9
     BATCH_SIZE = 10
     BUFFER_SIZE= 10000
-    EPOCHS = 50
+    EPOCHS = 30
     HIST_SIZE = 70 # frames to be looked on or SEQ_LEN
     TARGET_SIZE = 0
     N_NODES = 4
@@ -432,17 +439,17 @@ def main():
     D_LOC = N_NODES * 2 + 1
     D_DATA = N_VIEWS + N_WRAYS + D_LOC
     D_OUT = D_LOC
-    U_LSTM = 128
-    U_DENSE = 64
+    U_LSTM = 64
+    U_DENSE = 32
     U_OUT = D_LOC
     FOV_WALLS = 180
     MAX_VIEW_RANGE = 709
     STARTSEQ = 0
     SIM_STEPS = 3000
     MEAN = "data/mean_same1234_node4.npy"
-    NAME = "4model_v9"
+    NAME = "4model_v10"
     NAME = NAME + "_" + str( U_LSTM ) + "_" + str( U_DENSE ) + "_" + str( U_OUT ) + "_" + str( BATCH_SIZE ) + "_" + str( HIST_SIZE )
-    LOAD = "4model_v6_40_20_9_10_70"
+    LOAD = "4model_v9_128_64_9_10_70"
 
     tf.random.set_seed(13)
 
@@ -458,7 +465,7 @@ def main():
     diff1 = "data/sleap_1_diff1.h5"
     diff1rays = "data/raycast_data_diff1.csv"
 
-    if True:
+    if False:
         pathsTracksets = [same1,same3,same4,same5]
         pathsRaycasts = [same1rays,same3rays,same4rays,same5rays]
 
@@ -480,7 +487,7 @@ def main():
         saveModel( NAME, nmodel )
         plot_train_history( history, NAME )
     else:
-        # nmodel = tf.keras.models.load_model( LOAD )
+        nmodel = tf.keras.models.load_model( LOAD )
         # tracks = extract_coordinates( same1, [b'head', b'center', b'tail_basis', b'tail_end'] )
         # nLoc = getnLoc( tracks, 4, 3 )
         # print( getnLoc( tracks, nnodes=N_NODES, nfish=N_FISH )[100] )
@@ -493,7 +500,7 @@ def main():
         print( "x_val  : {}".format( x_val.shape ) )
         print( "y_val  : {}".format( y_val.shape ) )
 
-        traindata, valdata = getDatasets( x_train, y_train, x_val, y_val, BATCH_SIZE=BATCH_SIZE, BUFFER_SIZE=BUFFER_SIZE )
+        # traindata, valdata = getDatasets( x_train, y_train, x_val, y_val, BATCH_SIZE=BATCH_SIZE, BUFFER_SIZE=BUFFER_SIZE )
         # for x, y in traindata.take(1):
         #     predictun = nmodel.predict( x )
         #     print( "target" )
@@ -502,12 +509,12 @@ def main():
         # print( "prediction" )
         # print( predictun[0] )
 
-        startinput, startpos, startloc = loadStartData( diff1, diff1rays, [b'head', b'center', b'tail_basis', b'tail_end'], 3, notrandom=STARTSEQ, HIST_SIZE=HIST_SIZE, TARGET_SIZE=TARGET_SIZE, N_WRAYS=N_WRAYS, D_DATA=D_DATA, N_VIEWS=N_VIEWS, D_LOC=D_LOC, MEAN=MEAN )
+        startinput, startpos, startloc = loadStartData( diff1, diff1rays, [b'head', b'center', b'tail_basis', b'tail_end'], 3, notrandom=STARTSEQ, HIST_SIZE=HIST_SIZE, TARGET_SIZE=TARGET_SIZE, N_WRAYS=N_WRAYS, D_DATA=D_DATA, N_VIEWS=N_VIEWS, D_LOC=D_LOC, mean=MEAN )
 
         pos, posC, nLocs = simulate( model=nmodel, nnodes=N_NODES, nfish=N_FISH, startinput=startinput, startpos=startpos, startloc=startloc, timesteps=SIM_STEPS, N_VIEWS=N_VIEWS, N_WRAYS=N_WRAYS, D_LOC=D_LOC, FOV_WALLS=FOV_WALLS, MAX_VIEW_RANGE=MAX_VIEW_RANGE, mean=MEAN )
 
         df = pd.DataFrame( data = pos )
-        df.to_csv( LOAD + "tracks.csv", sep = ";" )
+        df.to_csv( LOAD + "_tracks.csv", sep = ";" )
 
 
 

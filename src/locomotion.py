@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import math
-from functions import getAngle, getDistance, readClusters, distancesToClusters, softmax, get_indices, convPolarToCart, get_distances, getAngles, getDistances
+from functions import getAngle, getDistance, readClusters, distancesToClusters, softmax, get_indices, convPolarToCart, get_distances, getAngles, getDistances, convertRadiansRange
 from itertools import chain
 from reader import *
 from sklearn.cluster import KMeans
@@ -248,8 +248,17 @@ def getnLoc( tracks, nnodes, nfish=3 ):
         # center_next - center
         vec_next = center_next - tracks[:-1,[nnodesT * 2 * f + 2, nnodesT * 2 * f + 3]]
         out[:,nf * f] = get_distances( tracks[:,[nnodesT * 2 * f + 2, nnodesT * 2 * f + 3]] )[:,0]
-        out[:,nf * f + 1] = getAngles( vec_look, vec_next )
-        out[:,nf * f + 2] = getAngles( vec_look, vec_look_next )
+        out[:,nf * f + 1] = getAngles( vec_look, vec_next ) # Change vector
+        # new part
+        anglesToChange = np.where( out[:,nf * f + 1] > ( np.pi * 3 / 2 ) )
+        out[anglesToChange,nf * f + 1] = out[anglesToChange,nf * f + 1] - 2 * np.pi
+        anglesToChange = np.where( out[:,nf * f + 1] > ( np.pi / 2 ) )
+        out[anglesToChange,nf * f + 1] = np.pi - out[anglesToChange,nf * f + 1]
+        # invert dis
+        out[anglesToChange,nf * f] = - out[anglesToChange, nf * f]
+        # new part end
+        # orientation
+        out[:,nf * f + 2] = convertRadiansRange( getAngles( vec_look, vec_look_next ) )
         ## Set every other node in relation to orientation and center node
         for n in range( nnodes - 1 ):
             # since head is at the first position...
@@ -264,6 +273,13 @@ def getnLoc( tracks, nnodes, nfish=3 ):
                 vec_cn_next = node_next - center_next
                 out[:,ix + 2 * n] = getDistances( center_next, node_next )
                 out[:,ix + 2 * n + 1] = getAngles( vec_look_next, vec_cn_next )
+                # new part
+                anglesToChange = np.where( out[:,ix + 2 * n + 1] > ( np.pi * 3 / 2 ) )
+                out[anglesToChange,ix + 2 * n + 1] = out[anglesToChange,ix + 2 * n + 1] - 2 * np.pi
+                anglesToChange = np.where( out[:,ix + 2 * n + 1] > ( np.pi / 2 ) )
+                out[anglesToChange,ix + 2 * n + 1] = np.pi - out[anglesToChange,ix + 2 * n + 1]
+                out[anglesToChange,ix + 2 * n] = - out[anglesToChange,ix + 2 * n]
+                # new part end
 
     return out
 
