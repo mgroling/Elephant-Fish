@@ -92,6 +92,7 @@ class Simulation:
                 x_train, y_train = multivariate_data(trajectory, trajectory[:, 0:3], 0, TRAIN_SPLIT, sequence_length, 1, 1, single_step = True)
                 x_val, y_val = multivariate_data(trajectory, trajectory[:, 0:3], TRAIN_SPLIT, None, sequence_length, 1, 1, single_step = True)
 
+                #append it all together (from all paths)
                 if i == 0 and j == 0:
                     x_train_data_all, y_train_data_all = x_train, y_train
                     x_val_data_all, y_val_data_all = x_val, y_val
@@ -99,16 +100,19 @@ class Simulation:
                     x_train_data_all, y_train_data_all = np.append(x_train_data_all, x_train, axis = 0), np.append(y_train_data_all, y_train, axis = 0)
                     x_val_data_all, y_val_data_all = np.append(x_val_data_all, x_val, axis = 0), np.append(y_val_data_all, y_val, axis = 0)
 
+        #save startpositions for use in testNetwork
         for i in range(0, 100):
             rand = random.randrange(0, x_train_data_all.shape[0]-1)
             self._start_simulation.append(x_train_data_all[rand:rand+1])
 
+        #make repeating tensor object
         train_data = tf.data.Dataset.from_tensor_slices((x_train_data_all, y_train_data_all))
         train_data = train_data.cache().shuffle(10000).batch(batch_size).repeat()
 
         val_data = tf.data.Dataset.from_tensor_slices((x_val_data_all, y_val_data_all))
         val_data = val_data.batch(batch_size).repeat()
 
+        #train
         if self.verbose >= 2:
             history = self._model.fit(train_data, epochs = epochs, steps_per_epoch = len(x_train_data_all) // batch_size, validation_data = val_data, validation_steps = 50, verbose = 1)
             plot_train_history(history, "Training and validation loss")
@@ -238,6 +242,7 @@ class Simulation:
                     pred_mov, pred_pos, pred_ori = float(pred[:, 0]), float(pred[:, 1]), float(pred[:, 2])%(2*np.pi)
                     pred_mov, pred_pos = convertAngleBack(pred_mov, pred_pos)
 
+                #compute movement of fish, according to predictions
                 angle_pos = (cur_pos[j][3] + pred_pos) % (2*math.pi)
                 movement_vector = (abs(pred_mov)*math.cos(angle_pos), abs(pred_mov)*math.sin(angle_pos))
                 angle_ori = cur_pos[j][3] % (2*math.pi)
@@ -256,6 +261,7 @@ class Simulation:
                     out_of_tank += 1
                     pred_mov, pred_pos, pred_ori, loco_bin = self.moveToCenter(cur_pos[j])
 
+                    #compute movement of fish, according to predictions
                     angle_pos = (temp_ori + pred_pos) - 2*math.pi if (temp_ori + pred_pos) > 2*math.pi else (temp_ori + pred_pos)
                     movement_vector = (abs(pred_mov)*math.cos(angle_pos), abs(pred_mov)*math.sin(angle_pos))
                     angle_ori = (temp_ori + pred_ori) - 2*math.pi if (temp_ori + pred_ori) > 2*math.pi else (temp_ori + pred_ori)
