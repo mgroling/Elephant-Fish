@@ -100,7 +100,7 @@ first let us define the look vector: the look vector is defined as the subtracti
 -angular movement, which is the angle between the look_vector at timestep t-1 and the vector from the center at t-1 to the center at t\
 -orientational movement, which is the angle between the look_vector at timestep t-1 and the look_vector at timestep t\
 
-## Future improvements
+# Future improvements
 
 Improvements we did not invest time in, since the data retrieval was not the main focus of this software project.
 
@@ -159,6 +159,24 @@ If only given center and head values, you can use
 @TODO
 ```
 to add static positions for the fish.
+
+# BASELINE Model
+
+## Input
+The Baseline model gets as input a sequence of hand-crafted vectors, which consist of the following: last locomotion (the locomotion that lead the fish to this point), wall rays and agent rays. The sequence length basically means that the network gets this hand-crafted vector for the last length_sequence timesteps.
+
+## Output
+
+The output is the locomotion for the following step.
+
+## Network structure
+
+We tried different network structures, but they all looked similar:
+LSTM-layer with 40-128 nodes
+Dropout-layer with a Dropout of 0.1-0.3
+Dense-layer with 20-64 nodes
+Dropout-layer with a Dropout of 0.1-0.3
+Dense-layer with as many nodes as the output is big (3 for non-bin-approach)
 
 # n Node Model
 
