@@ -285,6 +285,6 @@ Improvements which would or could have improved the results.
   + Either by the fix explained in presentation
   + Or by representing angles as vectors
 
-### Organizational
+### Organisational
 * Use more time for the model itself and not for the things around it
 * Start as early as possible with the model
