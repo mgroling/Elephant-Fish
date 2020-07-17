@@ -2,6 +2,11 @@
 
 ![Hi, I am Peter](data/peter.jpg)
 
+## Authors
+
+* Marc Gröling
+* Gabriel Kressin
+
 ## The goal
 
 How do animals decide what to do and where to move as a group? We use Guppys as a model for collective behavior. Typically, individual fish have been modeled with simple rules that determine their direction of movement in the immediate future. But even our “simple” Guppys are much more complex - they exhibit consistent behavioral variation (“personalities”), they remember things learned in the past and they build up social preferences. In project “RoboFish” our goal is to learn (data-driven!) models of fish behavior through observation and manipulation (using a robotic fish). Your goal in this software project is to learn deep neural network models (or RNNs) from live fish data and see how the prediction accuracy changes when providing additional information about the environment or the target individual than just trajectories.
