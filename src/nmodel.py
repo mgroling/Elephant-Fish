@@ -442,7 +442,7 @@ def main():
     MEAN = "data/mean_same1234_node4.npy"
     NAME = "4model_v9"
     NAME = NAME + "_" + str( U_LSTM ) + "_" + str( U_DENSE ) + "_" + str( U_OUT ) + "_" + str( BATCH_SIZE ) + "_" + str( HIST_SIZE )
-    LOAD = "4model_v6_40_20_9_10_70"
+    LOAD = "data/4model_v6_40_20_9_10_70"
 
     tf.random.set_seed(13)
 
@@ -487,13 +487,13 @@ def main():
         pathsTracksets = [same1]
         pathsRaycasts = [same1rays]
 
-        x_train, y_train, x_val, y_val = loadData( pathsTracksets, pathsRaycasts, nodes=[b'head', b'center', b'tail_basis', b'tail_end'], nfish=3, N_WRAYS=N_WRAYS, N_VIEWS=N_VIEWS, D_LOC=D_LOC, D_DATA=D_DATA, D_OUT=D_OUT, SPLIT=SPLIT, HIST_SIZE=HIST_SIZE, TARGET_SIZE=TARGET_SIZE, mean=MEAN )
-        print( "x_train: {}".format( x_train.shape ) )
-        print( "y_train: {}".format( y_train.shape ) )
-        print( "x_val  : {}".format( x_val.shape ) )
-        print( "y_val  : {}".format( y_val.shape ) )
+        # x_train, y_train, x_val, y_val = loadData( pathsTracksets, pathsRaycasts, nodes=[b'head', b'center', b'tail_basis', b'tail_end'], nfish=3, N_WRAYS=N_WRAYS, N_VIEWS=N_VIEWS, D_LOC=D_LOC, D_DATA=D_DATA, D_OUT=D_OUT, SPLIT=SPLIT, HIST_SIZE=HIST_SIZE, TARGET_SIZE=TARGET_SIZE, mean=MEAN )
+        # print( "x_train: {}".format( x_train.shape ) )
+        # print( "y_train: {}".format( y_train.shape ) )
+        # print( "x_val  : {}".format( x_val.shape ) )
+        # print( "y_val  : {}".format( y_val.shape ) )
 
-        traindata, valdata = getDatasets( x_train, y_train, x_val, y_val, BATCH_SIZE=BATCH_SIZE, BUFFER_SIZE=BUFFER_SIZE )
+        # traindata, valdata = getDatasets( x_train, y_train, x_val, y_val, BATCH_SIZE=BATCH_SIZE, BUFFER_SIZE=BUFFER_SIZE )
         # for x, y in traindata.take(1):
         #     predictun = nmodel.predict( x )
         #     print( "target" )
