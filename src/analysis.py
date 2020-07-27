@@ -63,13 +63,13 @@ def getClusters(paths, path_to_save, count_clusters = (20, 20, 20), verbose = Fa
     df_all = pd.concat(df_list)
 
     #get all linear_movement columns respectivly all angle columns
-    mov_cols = [col for col in df_all.columns if "next_x" in col]
-    ang_pos_cols = [col for col in df_all.columns if "next_y" in col]
-    ang_ori_cols = [col for col in df_all.columns if "angle_change_orientation" in col]
+    x_cols = [col for col in df_all.columns if "next_x" in col]
+    y_cols = [col for col in df_all.columns if "next_y" in col]
+    ori_cols = [col for col in df_all.columns if "angle_change_orientation" in col]
 
-    df_mov = df_all[mov_cols].melt(var_name = "columns", value_name = "value")
-    df_pos = df_all[ang_pos_cols].melt(var_name = "columns", value_name = "value")
-    df_ori = df_all[ang_ori_cols].melt(var_name = "columns", value_name = "value")
+    df_mov = df_all[x_cols].melt(var_name = "columns", value_name = "value")
+    df_pos = df_all[y_cols].melt(var_name = "columns", value_name = "value")
+    df_ori = df_all[ori_cols].melt(var_name = "columns", value_name = "value")
 
     # df_pos["value"] = convertRadiansRange(df_pos["value"].to_numpy())
     # df_ori["value"] = convertRadiansRange(df_ori["value"].to_numpy())
@@ -78,7 +78,7 @@ def getClusters(paths, path_to_save, count_clusters = (20, 20, 20), verbose = Fa
     kmeans_pos = KMeans(n_clusters = count_clusters[1]).fit(df_pos["value"].to_numpy().reshape(-1, 1))
     kmeans_ori = KMeans(n_clusters = count_clusters[2]).fit(df_ori["value"].to_numpy().reshape(-1, 1))
 
-    if verbose == True:
+    if verbose:
         freq_mov = collections.Counter(kmeans_mov.labels_)
         centers = kmeans_mov.cluster_centers_
         x, y = zip(*freq_mov.items())
@@ -256,8 +256,8 @@ def plot_train_history(history, title):
 
 if __name__ == "__main__":
     paths = ["data/locomotion_data_diff1.csv", "data/locomotion_data_diff2.csv", "data/locomotion_data_diff3.csv", "data/locomotion_data_diff4.csv", "data/locomotion_data_same1.csv", "data/locomotion_data_same3.csv", "data/locomotion_data_same4.csv", "data/locomotion_data_same5.csv"]
-    # getClusters(paths, "data/", (18,17,26), verbose = False)
-    getLinearCenters(paths, 0.5, 0.5, 0.25)
+    getClusters(paths, "data/", (25, 25, 25), verbose = False)
+    # getLinearCenters(paths, 0.5, 0.5, 0.25)
     # x, y_mov, y_pos, y_ori = createAverageDistanceForClusters(["data/locomotion_data_diff1.csv"], 8, 50, 1)
 
     # print(kneeLocatorPlotter(x, y_mov, "Count clusters vs. avg. distance to each cluster for linear movement", "mov"))

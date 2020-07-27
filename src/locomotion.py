@@ -45,6 +45,7 @@ def getLocomotion(np_array, path_to_save_to = None, mode="radians"):
             center_x_next = center_x_next * math.cos(rotate_axis) + center_y_next * math.sin(rotate_axis)
             center_y_next = center_y_next * math.cos(rotate_axis) - center_x_next * math.sin(rotate_axis)
 
+            #move first, then change orientation when reconstructing
             new_row[j*3] = center_x_next - center_x
             new_row[j*3+1] = center_y_next - center_y
             new_row[j*3+2] = getAngle(look_vector, look_vector_next, mode = mode)
@@ -67,10 +68,10 @@ def convertLocmotionToBin(loco, clusters_path, path_to_save = None, probabilitie
     #convert locomotion into bin representation for each fish
     for i in range(0, int(loco.shape[1]/3)):
         if probabilities:
-            #compute distances to cluster centers and invert them (1/x)
-            dist_mov = 1 / distancesToClusters(loco[:, i*3], clusters_mov)
-            dist_pos = 1 / distancesToClusters(loco[:, i*3+1], clusters_pos)
-            dist_ori = 1 / distancesToClusters(loco[:, i*3+2], clusters_ori)
+            #compute distances to cluster centers and invert them (1/x) (exp so we do not get divide by zero)
+            dist_mov = 1 / np.exp(distancesToClusters(loco[:, i*3], clusters_mov))
+            dist_pos = 1 / np.exp(distancesToClusters(loco[:, i*3+1], clusters_pos))
+            dist_ori = 1 / np.exp(distancesToClusters(loco[:, i*3+2], clusters_ori))
 
             #get probabilites row-wise with softmax function and append header
             prob_mov = np.append(np.array([["Fish_" + str(i) + "_prob_next_x_bin_" + str(j) for j in range(0, len(clusters_mov))]]), softmax(dist_mov), axis = 0)
@@ -93,34 +94,10 @@ def convertLocmotionToBin(loco, clusters_path, path_to_save = None, probabilitie
         df.to_csv(path_to_save, sep = ";")
 
 
-def row_l2c_additional_nodes( center_xyo, nLocsN ):
-    """
-    Returns 1d ndarray with new coordinates based on centerxy and orientation and given nlocs,
-    center_xyo [center_x, center_y, orientation]
-    Output: [node1_x, node1_y, node2_x, node2_y, ...]
-    """
-    nnodes = len( nLocsN ) // 2
-
-    # indices
-    dis = [2 * x for x in range( nnodes )]
-    ang = [2 * x + 1 for x in range( nnodes )]
-    xs = [2 * x for x in range( nnodes )]
-    ys = [2 * x + 1 for x in range( nnodes )]
-    # loc
-    nLocsN = np.array( nLocsN )
-    new_angles = nLocsN[ang] + center_xyo[2]
-    xvals = np.cos( new_angles ) * np.abs( nLocsN[dis] )
-    yvals = np.sin( new_angles ) * np.abs( nLocsN[dis] )
-    out = np.empty( 2 * nnodes )
-    out[xs] = xvals + center_xyo[0]
-    out[ys] = yvals + center_xyo[1]
-    return out
-
-
 def row_l2c( coords, locs ):
     """
     Returns 1d ndarray with new coordinates based on previos coordinades and given locomotions,
-    Output: [center1_x, center1_y, orientation1, center2_x, ...]
+    Output: [center1_x, center1_y, orientation1, ...]
     """
     nfish = len(coords) // 3
 
@@ -132,7 +109,6 @@ def row_l2c( coords, locs ):
     lin = [3 * x for x in range(nfish)]
     ang = [3 * x + 1 for x in range(nfish)]
     ori = [3 * x + 2 for x in range(nfish)]
-
     # computation
     new_angles = ( coords[os] + locs[ang] ) % ( np.pi * 2 )
     xvals = np.cos( new_angles ) * np.abs( locs[lin] )
@@ -182,7 +158,7 @@ def convLocToCart( loc, startpoints ):
         out[0,3 * f] = startpoints[4 * f + 2]
         out[0,3 * f + 1] = startpoints[4 * f + 3]
         # Angle between Fish Orientation and the unit vector
-        out[0,3 * f + 2] = getAngle( ( 1, 0 ), (startpoints[4 * f] - startpoints[4 * f + 2], startpoints[4 * f + 1] - startpoints[4 * f + 3],), "radians" )
+        out[0,3 * f + 2] = getAngle( (1,0,), (startpoints[4 * f] - startpoints[4 * f + 2], startpoints[4 * f + 1] - startpoints[4 * f + 3],), "radians" )
 
     for i in range(0, row):
         out[i + 1] = row_l2c( out[i], loc[i] )
@@ -229,34 +205,27 @@ def getnLoc( tracks, nnodes, nfish=3 ):
         Amount of nodes per fish, n >= 2
     output:
         [
-            [f1_lin, f1_ang, f1_ori, f1_1_dis, d1_1_ori, f1_2_dis, f1_2_ori, ..., f2_lin, f2_ang, f2_ori, ... ]
+            [ori]
         ]
-    outputshape: (length, (nnodes * 2 + 1) * nfish)
     """
     rows, cols = tracks.shape
     assert cols >= 4 * nfish
     assert rows > 1
     assert nnodes >= 1
-    if nnodes > 1:
-        assert cols // 2 // nfish == nnodes
-        nnodesT = nnodes
-    else:
-        nnodesT = 2
 
     nf = nnodes * 2 + 1 # entries per fish
     out = np.empty( ( rows - 1, nf * nfish ) )
-
     for f in range(nfish):
         ## Set first 3 entries
-        head_next = tracks[1:,[nnodesT * 2 * f, nnodesT * 2 * f + 1]]
-        center_next = tracks[1:,[nnodesT * 2 * f + 2, nnodesT * 2 * f + 3]]
+        head_next = tracks[1:,[4 * f, 4 * f + 1]]
+        center_next = tracks[1:,[4 * f + 2, 4 * f + 3]]
         # head - center
-        vec_look = tracks[:-1,[nnodesT * 2 * f, nnodesT * 2 * f + 1]] - tracks[:-1,[nnodesT * 2 * f + 2, nnodesT * 2 * f + 3]]
+        vec_look = tracks[:-1,[4 * f, 4 * f + 1]] - tracks[:-1,[4 * f + 2, 4 * f + 3]]
         # head - center
         vec_look_next = head_next - center_next
         # center_next - center
-        vec_next = center_next - tracks[:-1,[nnodesT * 2 * f + 2, nnodesT * 2 * f + 3]]
-        out[:,nf * f] = get_distances( tracks[:,[nnodesT * 2 * f + 2, nnodesT * 2 * f + 3]] )[:,0]
+        vec_next = center_next - tracks[:-1,[4 * f + 2, 4 * f + 3]]
+        out[:,nf * f] = get_distances( tracks[:,[4 * f + 2, 4 * f + 3]] )[:,0]
         out[:,nf * f + 1] = getAngles( vec_look, vec_next )
         out[:,nf * f + 2] = getAngles( vec_look, vec_look_next )
         ## Set every other node in relation to orientation and center node
@@ -269,7 +238,7 @@ def getnLoc( tracks, nnodes, nfish=3 ):
                 # Since the new orientation is exactly the angle o the vector between head and center
                 out[:,ix + 2 * n + 1] = 0
             else:
-                node_next = tracks[1:,[nnodesT * 2 * f + 2 + 2 * n, nnodesT * 2 * f + 2 + 2 * n + 1]]
+                node_next = tracks[1:,[4 * f + 2 + 2 * n, 4 * f + 2 + 2 * n + 1]]
                 vec_cn_next = node_next - center_next
                 out[:,ix + 2 * n] = getDistances( center_next, node_next )
                 out[:,ix + 2 * n + 1] = getAngles( vec_look_next, vec_cn_next )
@@ -279,9 +248,9 @@ def getnLoc( tracks, nnodes, nfish=3 ):
 
 def main():
 
-    updateLocomotions()
+    # updateLocomotions()
 
-    # updateLocomotionBin()
+    updateLocomotionBin()
 
     # get locomotion
     # df = pd.read_csv("data/locomotion_data_diff2.csv", sep = ";")
