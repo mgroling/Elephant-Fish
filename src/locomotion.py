@@ -68,10 +68,10 @@ def convertLocmotionToBin(loco, clusters_path, path_to_save = None, probabilitie
     #convert locomotion into bin representation for each fish
     for i in range(0, int(loco.shape[1]/3)):
         if probabilities:
-            #compute distances to cluster centers and invert them (1/x)
-            dist_mov = 1 / distancesToClusters(loco[:, i*3], clusters_mov)
-            dist_pos = 1 / distancesToClusters(loco[:, i*3+1], clusters_pos)
-            dist_ori = 1 / distancesToClusters(loco[:, i*3+2], clusters_ori)
+            #compute distances to cluster centers and invert them (1/x) (exp so we do not get divide by zero)
+            dist_mov = 1 / np.exp(distancesToClusters(loco[:, i*3], clusters_mov))
+            dist_pos = 1 / np.exp(distancesToClusters(loco[:, i*3+1], clusters_pos))
+            dist_ori = 1 / np.exp(distancesToClusters(loco[:, i*3+2], clusters_ori))
 
             #get probabilites row-wise with softmax function and append header
             prob_mov = np.append(np.array([["Fish_" + str(i) + "_prob_next_x_bin_" + str(j) for j in range(0, len(clusters_mov))]]), softmax(dist_mov), axis = 0)
@@ -248,9 +248,9 @@ def getnLoc( tracks, nnodes, nfish=3 ):
 
 def main():
 
-    updateLocomotions()
+    # updateLocomotions()
 
-    # updateLocomotionBin()
+    updateLocomotionBin()
 
     # get locomotion
     # df = pd.read_csv("data/locomotion_data_diff2.csv", sep = ";")
