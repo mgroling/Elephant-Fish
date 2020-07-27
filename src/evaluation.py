@@ -537,6 +537,26 @@ def animate_positions(track, track2 = None):
     plt.show()
 
 
+def plot_train_history( history, title ):
+    """
+    Plot history object from keras.
+    From: https://www.tensorflow.org/tutorials/structured_data/time_series
+    """
+    loss = history.history['loss']
+    val_loss = history.history['val_loss']
+
+    epochs = range(len(loss))
+
+    plt.figure()
+
+    plt.plot( epochs, loss, 'b', label='Training loss' )
+    plt.plot( epochs, val_loss, 'r', label='Validation loss' )
+    plt.title( title )
+    plt.legend()
+
+    plt.show()
+
+
 def main():
     # create_all_plots_together()
     # create_all_plots_separate()
