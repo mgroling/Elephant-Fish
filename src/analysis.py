@@ -63,8 +63,8 @@ def getClusters(paths, path_to_save, count_clusters = (20, 20, 20), verbose = Fa
     df_all = pd.concat(df_list)
 
     #get all linear_movement columns respectivly all angle columns
-    mov_cols = [col for col in df_all.columns if "linear_movement" in col]
-    ang_pos_cols = [col for col in df_all.columns if "angle_new_pos" in col]
+    mov_cols = [col for col in df_all.columns if "next_x" in col]
+    ang_pos_cols = [col for col in df_all.columns if "next_y" in col]
     ang_ori_cols = [col for col in df_all.columns if "angle_change_orientation" in col]
 
     df_mov = df_all[mov_cols].melt(var_name = "columns", value_name = "value")
@@ -188,6 +188,39 @@ def createAverageDistanceForClusters(paths, count_cluster_min, count_cluster_max
 
     return x, y_mov, y_pos, y_ori
 
+def getLinearCenters(paths, step_x, step_y, step_ori):
+    """
+    creates a center for the range of min value, max_value, step for x, y and ori and saves it to data/clusters.txt
+    """
+    df_list = []
+    for path in paths:
+        df_list.append(pd.read_csv(path, sep = ";"))
+    df_all = pd.concat(df_list)
+
+    #get all linear_movement columns respectivly all angle columns
+    x_cols = [col for col in df_all.columns if "next_x" in col]
+    y_cols = [col for col in df_all.columns if "next_y" in col]
+    ori_cols = [col for col in df_all.columns if "angle_change_orientation" in col]
+
+    df_x = df_all[x_cols].melt(var_name = "columns", value_name = "value")
+    df_y = df_all[y_cols].melt(var_name = "columns", value_name = "value")
+    df_ori = df_all[ori_cols].melt(var_name = "columns", value_name = "value")
+
+    min_x, max_x = df_x["value"].min(), df_x["value"].max()
+    min_y, max_y = df_y["value"].min(), df_y["value"].max()
+    min_ori, max_ori = df_ori["value"].min(), df_ori["value"].max()
+
+    centers_x, centers_y, centers_ori = np.arange(min_x, max_x, step_x), np.arange(min_y, max_y, step_y), np.arange(min_ori, max_ori, step_ori)
+
+    with open("data/clusters.txt", "w+") as f:
+        f.write("count_clusters(x, y, ori)\n" + str((len(centers_x), len(centers_y), len(centers_ori))) + "\n")
+        for elem in centers_x:
+            f.write(str(float(elem)) +"\n")
+        for elem in centers_y:
+            f.write(str(float(elem)) +"\n")
+        for elem in centers_ori:
+            f.write(str(float(elem)) +"\n")
+
 def kneeLocatorPlotter(x, y, title, kindOfLoc):
     # https://www.kaggle.com/kevinarvai/knee-elbow-point-detection
 
@@ -223,7 +256,8 @@ def plot_train_history(history, title):
 
 if __name__ == "__main__":
     paths = ["data/locomotion_data_diff1.csv", "data/locomotion_data_diff2.csv", "data/locomotion_data_diff3.csv", "data/locomotion_data_diff4.csv", "data/locomotion_data_same1.csv", "data/locomotion_data_same3.csv", "data/locomotion_data_same4.csv", "data/locomotion_data_same5.csv"]
-    getClusters(paths, "data/", (18,17,26), verbose = False)
+    # getClusters(paths, "data/", (18,17,26), verbose = False)
+    getLinearCenters(paths, 0.5, 0.5, 0.25)
     # x, y_mov, y_pos, y_ori = createAverageDistanceForClusters(["data/locomotion_data_diff1.csv"], 8, 50, 1)
 
     # print(kneeLocatorPlotter(x, y_mov, "Count clusters vs. avg. distance to each cluster for linear movement", "mov"))
