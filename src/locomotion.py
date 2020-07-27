@@ -34,14 +34,22 @@ def getLocomotion(np_array, path_to_save_to = None, mode="radians"):
             look_vector = (head_x - center_x, head_y - center_y)
             #new look vector
             look_vector_next = (head_x_next - center_x_next, head_y_next - center_y_next)
-            #vector to new position
-            vector_next = (center_x_next - center_x, center_y_next - center_y)
 
-            new_row[j*3] = vector_next[0]
-            new_row[j*3+1] = vector_next[1]
+            #convert coordinates to egocentric view (use this https://en.wikipedia.org/wiki/Rotation_of_axes) and use center of current timestep as origin
+            rotate_axis = getAngle(look_vector, (1, 0), mode = mode)
+
+            #convert center of timestep t
+            center_x = center_x * math.cos(rotate_axis) + center_y * math.sin(rotate_axis)
+            center_y = center_y * math.cos(rotate_axis) - center_x * math.sin(rotate_axis)
+            #convert center of timestep t+1
+            center_x_next = center_x_next * math.cos(rotate_axis) + center_y_next * math.sin(rotate_axis)
+            center_y_next = center_y_next * math.cos(rotate_axis) - center_x_next * math.sin(rotate_axis)
+
+            new_row[j*3] = center_x_next - center_x
+            new_row[j*3+1] = center_y_next - center_y
             new_row[j*3+2] = getAngle(look_vector, look_vector_next, mode = mode)
 
-            #convert from 0,2pi to -pi,pi
+            #convert ori from 0,2pi to -pi,pi
             new_row[j*3+2] = new_row[j*3+2]-2*np.pi if new_row[j*3+2] > np.pi else new_row[j*3+2]
         output[i] = new_row
 
@@ -65,8 +73,8 @@ def convertLocmotionToBin(loco, clusters_path, path_to_save = None, probabilitie
             dist_ori = 1 / distancesToClusters(loco[:, i*3+2], clusters_ori)
 
             #get probabilites row-wise with softmax function and append header
-            prob_mov = np.append(np.array([["Fish_" + str(i) + "_prob_mov_bin_" + str(j) for j in range(0, len(clusters_mov))]]), softmax(dist_mov), axis = 0)
-            prob_pos = np.append(np.array([["Fish_" + str(i) + "_prob_pos_bin_" + str(j) for j in range(0, len(clusters_pos))]]), softmax(dist_pos), axis = 0)
+            prob_mov = np.append(np.array([["Fish_" + str(i) + "_prob_next_x_bin_" + str(j) for j in range(0, len(clusters_mov))]]), softmax(dist_mov), axis = 0)
+            prob_pos = np.append(np.array([["Fish_" + str(i) + "_prob_next_y_bin_" + str(j) for j in range(0, len(clusters_pos))]]), softmax(dist_pos), axis = 0)
             prob_ori = np.append(np.array([["Fish_" + str(i) + "_prob_ori_bin_" + str(j) for j in range(0, len(clusters_ori))]]), softmax(dist_ori), axis = 0)
 
             temp = np.append(np.append(prob_mov, prob_pos, axis = 1), prob_ori, axis = 1)
