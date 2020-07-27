@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import math
-from functions import getAngle, getDistance, readClusters, distancesToClusters, softmax, get_indices, convPolarToCart, get_distances, getAngles, getDistances
+from functions import getAngle, getDistance, readClusters, distancesToClusters, softmax, get_indices, convPolarToCart, get_distances, getAngles, getDistances, convertAngle
 from itertools import chain
 from reader import *
 from sklearn.cluster import KMeans
@@ -12,7 +12,7 @@ def getLocomotion(np_array, path_to_save_to = None, mode="radians"):
     The information about each given fish (or object in general) should be first_position_x, first_position_y, second_position_x, second_position_y.
     It is assumed that the fish is looking into the direction of first_positon_x - second_position_x for x and first_positon_y - second_position_y for y.
     """
-    header = np.array([list(chain.from_iterable(("Fish_" + str(i) + "_linear_movement", "Fish_" + str(i) + "_angle_new_pos", "Fish_" + str(i) + "_angle_change_orientation") for i in range(0, int(np_array.shape[1]/4))))])
+    header = np.array([list(chain.from_iterable(("Fish_" + str(i) + "_next_x", "Fish_" + str(i) + "_next_y", "Fish_" + str(i) + "_angle_change_orientation") for i in range(0, int(np_array.shape[1]/4))))])
     output = np.empty((np_array.shape[0]-1, header.shape[1]))
 
     for i in range(0, np_array.shape[0]-1):
@@ -37,11 +37,12 @@ def getLocomotion(np_array, path_to_save_to = None, mode="radians"):
             #vector to new position
             vector_next = (center_x_next - center_x, center_y_next - center_y)
 
-            new_row[j*3+1] = getAngle(look_vector, vector_next, mode = mode)
+            new_row[j*3] = vector_next[0]
+            new_row[j*3+1] = vector_next[1]
             new_row[j*3+2] = getAngle(look_vector, look_vector_next, mode = mode)
-            temp = getDistance(center_x, center_y, center_x_next, center_y_next)
-            #its forward movement if it's new position is not at the back of the fish and otherwise it is backward movement
-            new_row[j*3] = -temp if new_row[j*3+1] > math.pi/2 and new_row[j*3+1] < 3/2*math.pi else temp
+
+            #convert from 0,2pi to -pi,pi
+            new_row[j*3+2] = new_row[j*3+2]-2*np.pi if new_row[j*3+2] > np.pi else new_row[j*3+2]
         output[i] = new_row
 
     if path_to_save_to == None:
@@ -270,7 +271,7 @@ def getnLoc( tracks, nnodes, nfish=3 ):
 
 def main():
 
-    # updateLocomotions()
+    updateLocomotions()
 
     # updateLocomotionBin()
 
@@ -281,19 +282,8 @@ def main():
     # convLocToCart( loc, [282.05801392, 85.2730484, 278.16235352, 112.26922607, 396.72821045, 223.87356567, 388.54510498, 198.40411377, 345.84439087, 438.7845459, 325.3197937, 426.67755127] )
 
     # convertLocmotionToBin(loco, "data/clusters.txt", "data/locomotion_data_bin_diff4.csv")
-    tracks = extract_coordinates( "data/sleap_1_diff1.h5", [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'] )
     # tracks = extract_coordinates( "data/sleap_1_diff1.h5", [b'head', b'center'] )
-
-    loc = getnLoc( tracks, 10 )
-    print( np.amax( loc, axis = 0 ))
-    print( np.amin( loc, axis = 0 ))
-    print( np.mean( loc, axis = 0 ))
-    print( np.where( loc > 67 ) )
-    print( loc[:,40] )
-    print( loc.shape )
-
-    print( tracks[0,20:41] )
-    # print( tracks[11919] )
+    # getnLoc( tracks, 2 )
 
 
 if __name__ == "__main__":
