@@ -12,7 +12,7 @@ def getLocomotion(np_array, path_to_save_to = None, mode="radians"):
     The information about each given fish (or object in general) should be first_position_x, first_position_y, second_position_x, second_position_y.
     It is assumed that the fish is looking into the direction of first_positon_x - second_position_x for x and first_positon_y - second_position_y for y.
     """
-    header = np.array([list(chain.from_iterable(("Fish_" + str(i) + "_linear_movement", "Fish_" + str(i) + "_angle_new_pos", "Fish_" + str(i) + "_angle_change_orientation") for i in range(0, int(np_array.shape[1]/4))))])
+    header = np.array([list(chain.from_iterable(("Fish_" + str(i) + "_next_x", "Fish_" + str(i) + "_next_y", "Fish_" + str(i) + "_angle_change_orientation") for i in range(0, int(np_array.shape[1]/4))))])
     output = np.empty((np_array.shape[0]-1, header.shape[1]))
 
     for i in range(0, np_array.shape[0]-1):
@@ -37,12 +37,9 @@ def getLocomotion(np_array, path_to_save_to = None, mode="radians"):
             #vector to new position
             vector_next = (center_x_next - center_x, center_y_next - center_y)
 
-            new_row[j*3+1] = getAngle(look_vector, vector_next, mode = mode)
+            new_row[j*3] = vector_next[0]
+            new_row[j*3+1] = vector_next[1]
             new_row[j*3+2] = getAngle(look_vector, look_vector_next, mode = mode)
-
-            temp = getDistance(center_x, center_y, center_x_next, center_y_next)
-            #convert from 0,2pi to -1/2pi,1/2pi and change movement so it can be reverted
-            new_row[j*3], new_row[j*3+1] = convertAngle(temp, new_row[j*3+1])
 
             #convert from 0,2pi to -pi,pi
             new_row[j*3+2] = new_row[j*3+2]-2*np.pi if new_row[j*3+2] > np.pi else new_row[j*3+2]
