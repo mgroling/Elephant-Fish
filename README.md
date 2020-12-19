@@ -58,19 +58,13 @@ These dependencies will be needed for this project to work, make sure you have i
 * Python 3.6.10
 * sklearn
 * numpy
-* python
 * imageio
 * seaborn
 * matplotlib
 * scipy
 * h5py
-* sys
-* math
-* os
-* itertools
 * keras
 * tensorflow 2.2.1
-* random
 * shap
 * collections
 * kneed
