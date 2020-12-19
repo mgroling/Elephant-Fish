@@ -1,3 +1,5 @@
+# File to read and convert sleap data
+
 import h5py
 import pandas as pd
 import numpy as np
@@ -70,7 +72,7 @@ def extract_rows(file, nodes_to_extract, fish_to_extract = [0,1,2], verbose = Fa
 
     if max(fish_to_extract) >= n_fishes:
         print("Error: invalid fishes in argument fish_to_extract")
-        sys.exit
+        sys.exit()
 
     # Get indices of wanted nodes
     node_indices = list(np.where( np.in1d(node_names, nodes_to_extract) )[0])
@@ -444,35 +446,50 @@ def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2], inter
     return ret
 
 
+def saveTrackdata(sleapfile, savefile ):
+    """
+    Saves output from given sleap file to trackData file.
+    sleapfile: path to sleap file
+    savefile: path to outputfile
+    """
+    nodes = [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end']
+    # get coordinates
+    coordinates = extract_coordinates( sleapfile, nodes, fish_to_extract=[0,1,2] )
+    # prepare coordinate values
+    ncords = len( nodes ) * 2
+    nfish = int( coordinates.shape[-1] / ncords )
+    frames = coordinates.shape[0]
+    # Create output array
+    output = np.empty( ( nfish, frames, ncords ) )
+    for f in range( nfish ):
+        output[f] = coordinates[:,f * ncords: (f + 1) * ncords]
+    # Save in new file format
+    np.save( savefile, output )
+
 
 if __name__ == "__main__":
-    file = "data/sleap_1_diff4.h5"
+    # Convert all sleap data to trackData
+    same1 = "data/sleap/sleap_1_same1.h5"
+    same3 = "data/sleap/sleap_1_same3.h5"
+    same4 = "data/sleap/sleap_1_same4.h5"
+    same5 = "data/sleap/sleap_1_same5.h5"
+    diff1 = "data/sleap/sleap_1_diff1.h5"
+    diff2 = "data/sleap/sleap_1_diff2.h5"
+    diff3 = "data/sleap/sleap_1_diff3.h5"
+    diff4 = "data/sleap/sleap_1_diff4.h5"
+    ifiles = [ same1, same3, same4, same5, diff1, diff2, diff3, diff4 ]
 
-    output = extract_coordinates(file, [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end'], fish_to_extract=[0], verbose=True)
-    #output2 = extract_coordinates(file2, [b'head'], fish_to_extract=[0])
-    print(output.shape)
-    #print(output2[9145:9147,])
-    # print("First 20 rows")
-    # print(output[0:20,:])
-    # print("nan values")
-    # print(np.where(np.isnan(output)))
-    # print("With removed values:")
-    # output[12,0] = float('nan')
-    # output[13,0] = float('nan')
-    # output[14,0] = float('nan')
-    # output[16,0] = float('nan')
-    # output[3,1] = float('nan')
-    # output[0,3] = float('nan')
-    # output[0,2] = float('nan')
-    # output[1,2] = float('nan')
-    # output[2,2] = float('nan')
-    # output[19,1] = float('nan')
-    # output[19,3] = float('nan')
-    # output[18,3] = float('nan')
-    # output[17,3] = float('nan')
-    # print(output[0:20,:])
-    # interpolate_missing_values(output)
+    out1 = "data/trackData/track1.npy"
+    out2 = "data/trackData/track2.npy"
+    out3 = "data/trackData/track3.npy"
+    out4 = "data/trackData/track4.npy"
+    out5 = "data/trackData/track5.npy"
+    out6 = "data/trackData/track6.npy"
+    out7 = "data/trackData/track7.npy"
+    out8 = "data/trackData/track8.npy"
+    ofiles = [ out1, out2, out3, out4, out5, out6, out7, out8 ]
 
-    # woutlier = interpolate_outliers(output)
-    #print(output.mean(axis = 0))
-    #print(woutlier)
+    for i in range( len( ifiles ) ):
+        saveTrackdata( ifiles[i], ofiles[i] )
+        print( "*", end="" )
+    print( "" )
