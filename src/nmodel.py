@@ -63,7 +63,7 @@ def stealWallRays( path, COUNT_RAYS_WALLS=15, nfish=3 ):
     Steals wall rays from raycast data
     """
     raycasts = pd.read_csv( path, sep = ";" ).to_numpy()
-    return raycasts[:,-15 * nfish:]
+    return raycasts[:,-COUNT_RAYS_WALLS * nfish:]
 
 
 def createModel( name, U_LSTM, U_DENSE, U_OUT, input_shape, dropout=None ):
