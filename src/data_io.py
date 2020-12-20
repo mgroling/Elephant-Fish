@@ -1,4 +1,4 @@
-# File to load track coordinates
+# File to load data
 
 import numpy as np
 import pandas as pd
@@ -24,3 +24,12 @@ def lazytrackData( n ):
     track8 = "data/trackData/track8.npy"
     tracks = [ track1, track2, track3, track4, track5, track6, track7, track8 ]
     return np.load( tracks[n] )
+
+
+def loadRaycastData( path ):
+    """
+    Loads raycast data from path
+    """
+    raycasts = pd.read_csv( path, sep = ";" ).to_numpy()
+    print( raycasts )
+    print( raycasts.shape )
