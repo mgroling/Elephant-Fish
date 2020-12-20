@@ -469,9 +469,13 @@ def saveTrackdata(sleapfile, savefile, start=None, end=None ):
     nfish = int( coordinates.shape[-1] / ncords )
     frames = coordinates.shape[0]
     # Create output array
-    output = np.empty( ( nfish, frames, ncords ) )
+    output = np.empty( ( nfish, frames, 2, len( nodes ) ) )
+    # To unravel x and y values, indices are created
+    x_idxs = np.array( range( 0, ncords, 2 ) )
+    y_idxs = np.array( range( 1, ncords, 2 ) )
     for f in range( nfish ):
-        output[f] = coordinates[:,f * ncords: (f + 1) * ncords]
+        output[f,:,0] = coordinates[:, ( x_idxs + f * ncords )]
+        output[f,:,1] = coordinates[:, ( y_idxs + f * ncords )]
     # Save in new file format
     np.save( savefile, output )
 

@@ -1,5 +1,9 @@
 # File to load data
 
+# trackData is saved in following shape:
+# ( nfish, nframes, 2, nnodes )
+# The last 2 dimensions are the x and y coordinates.
+
 import numpy as np
 import pandas as pd
 
