@@ -26,7 +26,8 @@ def addTracksOnVideo( inputvideo, outputvideo, tracks, fps=30, dimension=(960,72
     Fishskeleton: [(0,1), (0,2), (0,3), (1,2), (1,3), (2,4), (3,5), (2,6), (3,7), (6,8), (7,8), (8,9)]
     Only Center and Head: [(0,1)]
     """
-    nfish, row, nnodes = tracks.shape
+    nfish, row, ncords, nnodes = tracks.shape
+    print( tracks.shape )
     assert row >= 1
 
     # Set up input
@@ -54,9 +55,9 @@ def addTracksOnVideo( inputvideo, outputvideo, tracks, fps=30, dimension=(960,72
             # frame = cv2.flip( frame, 0 )
             for f in range( nfish ):
                 points = []
-                for n in range( nnodes//2 ):
-                    x = int( tracks[f,i,2 * n] )
-                    y = int( tracks[f,i,2 * n + 1] )
+                for n in range( nnodes ):
+                    x = int( tracks[f,i,0,n] )
+                    y = int( tracks[f,i,1,n] )
                     points.append( ( x, y, ) )
                 for p in points:
                     frame = cv2.circle( frame, p, psize, colors[f], -1 )
@@ -91,7 +92,7 @@ def addTracksOnTank( outputvideo, tracks, tank="data/tank.png", nfish = 3, fps=3
     Fishskeleton: [(0,1), (0,2), (0,3), (1,2), (1,3), (2,4), (3,5), (2,6), (3,7), (6,8), (7,8), (8,9)]
     Only Center and Head: [(0,1)]
     """
-    nfish, row, nnodes = tracks.shape
+    nfish, row, ncords, nnodes = tracks.shape
     assert row >= 1
 
     # Set up input
@@ -114,9 +115,9 @@ def addTracksOnTank( outputvideo, tracks, tank="data/tank.png", nfish = 3, fps=3
         frame = img.copy()
         for f in range( nfish ):
             points = []
-            for n in range( nnodes // 2 ):
-                x = int( tracks[f,i,2 * n] )
-                y = int( tracks[f,i,2 * n + 1] )
+            for n in range( nnodes ):
+                x = int( tracks[f,i,0,n] )
+                y = int( tracks[f,i,1,n] )
                 points.append( ( x, y, ) )
             for p in points:
                 frame = cv2.circle( frame, p, psize, colors[f], -1 )
@@ -139,9 +140,9 @@ def addTracksOnTank( outputvideo, tracks, tank="data/tank.png", nfish = 3, fps=3
 
 def main():
 
-    tracks = data_io.lazytrackData( 1 )
+    tracks = data_io.lazytrackData( 0 )
 
-    addTracksOnVideo( diff2, diff2_out, tracks, showvid=True, skeleton=[(0,1), (0,2), (0,3), (1,2), (1,3), (2,4), (3,5), (2,6), (3,7), (6,8), (7,8), (8,9)] )
+    addTracksOnVideo( diff1, diff1_out, tracks, showvid=True, skeleton=[(0,1), (0,2), (0,3), (1,2), (1,3), (2,4), (3,5), (2,6), (3,7), (6,8), (7,8), (8,9)] )
     # addTracksOnTank( diff2_out, tracks, showvid=True, skeleton=[(0,1), (0,2), (0,3), (1,2), (1,3), (2,4), (3,5), (2,6), (3,7), (6,8), (7,8), (8,9)] )
 
 if __name__ == "__main__":
