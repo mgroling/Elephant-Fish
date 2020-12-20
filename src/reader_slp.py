@@ -446,15 +446,24 @@ def extract_coordinates(file, nodes_to_extract, fish_to_extract = [0,1,2], inter
     return ret
 
 
-def saveTrackdata(sleapfile, savefile ):
+def saveTrackdata(sleapfile, savefile, start=None, end=None ):
     """
     Saves output from given sleap file to trackData file.
     sleapfile: path to sleap file
     savefile: path to outputfile
+    start: start frame for data
+    end: end frame for data
     """
     nodes = [b'head', b'center', b'l_fin_basis', b'r_fin_basis', b'l_fin_end', b'r_fin_end', b'l_body', b'r_body', b'tail_basis', b'tail_end']
     # get coordinates
-    coordinates = extract_coordinates( sleapfile, nodes, fish_to_extract=[0,1,2] )
+    if end is None and start is None:
+        coordinates = extract_coordinates( sleapfile, nodes, fish_to_extract=[0,1,2] )
+    elif start is None:
+        coordinates = extract_coordinates( sleapfile, nodes, fish_to_extract=[0,1,2] )[:end]
+    elif end is None:
+        coordinates = extract_coordinates( sleapfile, nodes, fish_to_extract=[0,1,2] )[start:]
+    else:
+        coordinates = extract_coordinates( sleapfile, nodes, fish_to_extract=[0,1,2] )[start:end]
     # prepare coordinate values
     ncords = len( nodes ) * 2
     nfish = int( coordinates.shape[-1] / ncords )
@@ -477,7 +486,7 @@ if __name__ == "__main__":
     diff2 = "data/sleap/sleap_1_diff2.h5"
     diff3 = "data/sleap/sleap_1_diff3.h5"
     diff4 = "data/sleap/sleap_1_diff4.h5"
-    ifiles = [ same1, same3, same4, same5, diff1, diff2, diff3, diff4 ]
+    ifiles = [ diff1, diff2, diff3, diff4, same1, same3, same4, same5, ]
 
     out1 = "data/trackData/track1.npy"
     out2 = "data/trackData/track2.npy"
@@ -487,9 +496,16 @@ if __name__ == "__main__":
     out6 = "data/trackData/track6.npy"
     out7 = "data/trackData/track7.npy"
     out8 = "data/trackData/track8.npy"
-    ofiles = [ out1, out2, out3, out4, out5, out6, out7, out8 ]
+    ofiles = [ out1, out2, out3, out4, out5, out6, out7, out8, ]
 
     for i in range( len( ifiles ) ):
-        saveTrackdata( ifiles[i], ofiles[i] )
+        start, end = None, None
+        if i == 2:
+            end = 17000
+        elif i == 3:
+            start = 120
+        elif i == 5:
+            start = 130
+        saveTrackdata( ifiles[i], ofiles[i], start, end )
         print( "*", end="" )
     print( "" )
