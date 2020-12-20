@@ -3,7 +3,7 @@ import pandas as pd
 import imageio
 import math
 from functions import getRedPoints, defineLines, getDistance, get_intersect, getAngle
-from reader import *
+from reader_slp import *
 
 class Raycast:
     def __init__(self, wall_lines, count_bins_agents, count_rays_walls, radius_field_of_view_agents, radius_field_of_view_walls, max_view_range, count_fishes):
@@ -127,15 +127,31 @@ def updateRaycasts():
 
     ray = Raycast(our_wall_lines, COUNT_BINS_AGENTS, WALL_RAYS_WALLS, RADIUS_FIELD_OF_VIEW_AGENTS, RADIUS_FIELD_OF_VIEW_WALLS, MAX_VIEW_RANGE, COUNT_FISHES)
 
-    ray.getRays(extract_coordinates("data/sleap_1_diff1.h5", [b'head', b'center'], fish_to_extract=[0,1,2]), "data/raycast_data_diff1.csv")
-    ray.getRays(extract_coordinates("data/sleap_1_diff2.h5", [b'head', b'center'], fish_to_extract=[0,1,2]), "data/raycast_data_diff2.csv")
-    ray.getRays(extract_coordinates("data/sleap_1_diff3.h5", [b'head', b'center'], fish_to_extract=[0,1,2])[:17000], "data/raycast_data_diff3.csv")
-    ray.getRays(extract_coordinates("data/sleap_1_diff4.h5", [b'head', b'center'], fish_to_extract=[0,1,2])[120:], "data/raycast_data_diff4.csv")
+    r1 = ray.getRays(extract_coordinates("data/sleap_1_diff1.h5", [b'head', b'center'], fish_to_extract=[0,1,2]), "data/raycast_data_diff1.csv")
+    r2 =ray.getRays(extract_coordinates("data/sleap_1_diff2.h5", [b'head', b'center'], fish_to_extract=[0,1,2]), "data/raycast_data_diff2.csv")
+    r3 = ray.getRays(extract_coordinates("data/sleap_1_diff3.h5", [b'head', b'center'], fish_to_extract=[0,1,2])[:17000], "data/raycast_data_diff3.csv")
+    r4 = ray.getRays(extract_coordinates("data/sleap_1_diff4.h5", [b'head', b'center'], fish_to_extract=[0,1,2])[120:], "data/raycast_data_diff4.csv")
 
-    ray.getRays(extract_coordinates("data/sleap_1_same1.h5", [b'head', b'center'], fish_to_extract=[0,1,2]), "data/raycast_data_same1.csv")
-    ray.getRays(extract_coordinates("data/sleap_1_same3.h5", [b'head', b'center'], fish_to_extract=[0,1,2])[130:], "data/raycast_data_same3.csv")
-    ray.getRays(extract_coordinates("data/sleap_1_same4.h5", [b'head', b'center'], fish_to_extract=[0,1,2]), "data/raycast_data_same4.csv")
-    ray.getRays(extract_coordinates("data/sleap_1_same5.h5", [b'head', b'center'], fish_to_extract=[0,1,2]), "data/raycast_data_same5.csv")
+    r5 = ray.getRays(extract_coordinates("data/sleap_1_same1.h5", [b'head', b'center'], fish_to_extract=[0,1,2]), "data/raycast_data_same1.csv")
+    r6 = ray.getRays(extract_coordinates("data/sleap_1_same3.h5", [b'head', b'center'], fish_to_extract=[0,1,2])[130:], "data/raycast_data_same3.csv")
+    r7 = ray.getRays(extract_coordinates("data/sleap_1_same4.h5", [b'head', b'center'], fish_to_extract=[0,1,2]), "data/raycast_data_same4.csv")
+    r8 = ray.getRays(extract_coordinates("data/sleap_1_same5.h5", [b'head', b'center'], fish_to_extract=[0,1,2]), "data/raycast_data_same5.csv")
+    rays = [ r1, r2, r3, r4, r5, r6, r7, r8 ]
+
+    out1 = "data/raycastData/raycast1.npy"
+    out2 = "data/raycastData/raycast2.npy"
+    out3 = "data/raycastData/raycast3.npy"
+    out4 = "data/raycastData/raycast4.npy"
+    out5 = "data/raycastData/raycast5.npy"
+    out6 = "data/raycastData/raycast6.npy"
+    out7 = "data/raycastData/raycast7.npy"
+    out8 = "data/raycastData/raycast8.npy"
+    outs = [ out1, out2, out3, out4, out5, out6, out7, out8 ]
+
+    # Data preparation
+    rpf = COUNT_BINS_AGENTS + WALL_RAYS_WALLS # rays per Fish
+    for i in range( len( outs ) ):
+        rays[i][:, ]
 
 def main():
     #Set variables
@@ -145,17 +161,6 @@ def main():
     RADIUS_FIELD_OF_VIEW_AGENTS = 300
     MAX_VIEW_RANGE = 709
     COUNT_FISHES = 3
-
-    #Extract Raycasts
-    #our_wall_lines = defineLines(getRedPoints(path = "data/final_redpoint_wall.jpg"))
-    # max_dist = 0
-    # for i in range(0, len(our_wall_lines)):
-    #     for j in range(0, len(our_wall_lines)):
-    #         temp = getDistance(our_wall_lines[i][0], our_wall_lines[i][1], our_wall_lines[j][0], our_wall_lines[j][1])
-    #         if temp > max_dist:
-    #             max_dist = temp
-
-    # print(max_dist) #max dist = 708.3784299369935
 
     updateRaycasts()
 
